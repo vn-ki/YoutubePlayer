@@ -6,12 +6,16 @@ class MainWindow(Gtk.Window) :
     def __init__(self) :
         Gtk.Window.__init__(self, title="YouTube Player")
         self.set_border_width(10)
+        self.set_size_request(400, 100)
 
-        ##
+
+        ## Main Box: All widgets are inside this
         self.mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=6)
         ##
 
+        #Input box
         self.entry = Gtk.Entry()
+        self.entry.set_placeholder_text("URL")
         self.mainBox.pack_start(self.entry, True, True, 0)
 
         ##
@@ -45,6 +49,16 @@ class MainWindow(Gtk.Window) :
     def previous(self, widget) :
         return
     def play(self, widget) :
+        url = self.entry.get_text()
+        if url!='' :
+             #Use pafy
+             return
+
+        #else do play pause using lib vlc
+        if self.playButton.get_label() == 'Play' :
+            self.playButton.set_label('Pause')
+        else :
+            self.playButton.set_label('Play')
         return
     def next(self, widget) :
         return
