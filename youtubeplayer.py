@@ -67,49 +67,60 @@ class YouTubePlayer(Gtk.Window) :
 
     def play(self, widget) :
         url = self.entry.get_text()
+
+        if self.vlcShell != None :
+            if self.playButton.get_label() == 'Play' :
+                self.vlcShell.stdin.write(bytes('play\n', 'utf-8'))
+                self.playButton.set_label('Pause')
+            else :
+                self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
+                self.playButton.set_label('Play')
+            try :
+                self.vlcShell.stdin.flush()
+                return
+            except BrokenPipeError :
+                self.vlcShell = None
+
         if url!='' :
-            #Use pafy
-            if 'list' not in url : #Not a playist
-                #pafy code goes here
+            self.openVLC(url)
 
-                video_url = ''  # URL from pafy; for tarun
-
-
-                if self.AUDIO_ONLY == true :
-                    self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf="rc" '.split()+video_url)
-                else :
-                    self.vlcShell = subprocess.Popen('vlc --qt-minimal-view --extraintf="rc" '.split()+video_url)
-
-                return
-            else : # A playlist
-            #You'll most propably have to use threading module
-            #while playing playlist
-            #Try looking into that.
-            #Else I can do it.
-            #And use get_playlist2() and iterate through it
-            #rather than using get_playlist()
-
-
-                return
 
         #else do play pause using lib vlc
-        if self.playButton.get_label() == 'Play' :
-            self.vlcShell.stdin.write(bytes('play', 'utf-8'))
-            self.vlcShell.stdin.flush()
-            self.playButton.set_label('Pause')
-        else :
-            self.vlcShell.stdin.write(bytes('pause', 'utf-8'))
-            self.vlcShell.stdin.flush()
-            self.playButton.set_label('Play')
+
         return
 
+    def openVLC(self,url) :
+        #Use pafy
+        if 'list' not in url : #Not a playist
+            #pafy code goes here
+
+            video_url = ''  # URL from pafy; for tarun
+            video_url = url
+
+            if self.AUDIO_ONLY == True :
+                self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
+            else :
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
+
+            return
+        else : # A playlist
+        #You'll most propably have to use threading module
+        #while playing playlist
+        #Try looking into that.
+        #Else I can do it.
+        #And use get_playlist2() and iterate through it
+        #rather than using get_playlist()
+
+
+            return
+
     def next(self, widget) :
-        self.vlcShell.stdin.write(bytes('next', 'utf-8'))
+        self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
         self.vlcShell.stdin.flush()
         return
 
     def previous(self, widget) :
-        self.vlcShell.stdin.write(bytes('prev', 'utf-8'))
+        self.vlcShell.stdin.write(bytes('prev\n', 'utf-8'))
         self.vlcShell.stdin.flush()
         return
 
