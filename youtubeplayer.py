@@ -6,7 +6,9 @@ from gi.repository import Gtk
 
 class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
+
         self.AUDIO_ONLY = False
+        self.vlcShell = None
 
         Gtk.Window.__init__(self, title="YouTube Player")
         self.set_border_width(10)
@@ -68,41 +70,51 @@ class YouTubePlayer(Gtk.Window) :
         if url!='' :
             #Use pafy
             if 'list' not in url : #Not a playist
+                #pafy code goes here
+
                 video_url = ''  # URL from pafy; for tarun
 
 
                 if self.AUDIO_ONLY == true :
-                    subprocess.Popen('cvlc --no-video '.split()+video_url)
+                    self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf="rc" '.split()+video_url)
                 else :
-                    subprocess.Popen('vlc --qt-minimal-view '.split()+video_url)
+                    self.vlcShell = subprocess.Popen('vlc --qt-minimal-view --extraintf="rc" '.split()+video_url)
 
                 return
             else : # A playlist
+            #You'll most propably have to use threading module
+            #while playing playlist
+            #Try looking into that.
+            #Else I can do it.
+            #And use get_playlist2() and iterate through it
+            #rather than using get_playlist()
+
 
                 return
 
         #else do play pause using lib vlc
         if self.playButton.get_label() == 'Play' :
-            subprocess.run('dbus-send --type=method_call --dest=org.mpris.MediaPlayer2.vlc /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Play'.split())
+            self.vlcShell.stdin.write(bytes('play', 'utf-8'))
+            self.vlcShell.stdin.flush()
             self.playButton.set_label('Pause')
         else :
-            subprocess.run('dbus-send --type=method_call --dest=org.mpris.MediaPlayer2.vlc /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Pause'.split())
+            self.vlcShell.stdin.write(bytes('pause', 'utf-8'))
+            self.vlcShell.stdin.flush()
             self.playButton.set_label('Play')
         return
 
     def next(self, widget) :
-        subprocess.run('dbus-send --type=method_call --dest=org.mpris.MediaPlayer2.vlc /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next'.split())
+        self.vlcShell.stdin.write(bytes('next', 'utf-8'))
+        self.vlcShell.stdin.flush()
         return
 
     def previous(self, widget) :
-        subprocess.run('dbus-send --type=method_call --dest=org.mpris.MediaPlayer2.vlc /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous'.split())
+        self.vlcShell.stdin.write(bytes('prev', 'utf-8'))
+        self.vlcShell.stdin.flush()
         return
 
     def download(self, widget) :
-        #For tarun
-        #Research on how to download videos
-        #Use pafy's download feature or YouTube-dl's downlaod feature
-        #Youtube-dl would be more effitient
+        #I'll do it, later.
         return
 
     def audioOnly(self, widget) :
