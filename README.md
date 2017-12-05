@@ -1,5 +1,6 @@
 # YoutubePlayer
 Play videos from YouTube directly using vlc with the ability to stream audio only.
+![Alt text](/images/screenshots/screenshot1.png?raw=true)
 
 ## Dependencies
 - [Python 3](https://www.python.org/download/releases/3.0/)
@@ -20,3 +21,16 @@ $ cd YoutubePlayer
 $ chmod +x main.py
 $ ./main.py
 ```
+
+##Usage
+
+- Enter the YouTube link in the url tab and press play. The video should start playing.
+- If you want to search for the video, type ```/<search_query>``` in the url input and press play. The top search result should start playing.
+- If you want to search for a playlist instead of a video, type ```//<search_query>``` in the url input and press play.
+- The download feature (for now) downloads the best available quality. The downloaded file will be available in ```~/Downloads/YouTubePlayer/``` directory.
+
+##Upcoming features
+
+- Better support for windows.
+- Improved search
+- More download options
