@@ -4,6 +4,7 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 <p align="center">
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
 </p>
+
 ## Dependencies
 - [Python 3](https://www.python.org/download/releases/3.0/)
 - [Pafy](https://pypi.python.org/pypi/pafy)
