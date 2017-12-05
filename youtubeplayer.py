@@ -3,6 +3,7 @@ import subprocess
 import pafy
 import urllib
 import threading
+import os
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
@@ -12,6 +13,7 @@ class YouTubePlayer(Gtk.Window) :
 
         self.AUDIO_ONLY = False
         self.vlcShell = None
+        self.downloadThread = None
 
         Gtk.Window.__init__(self, title="YouTube Player")
         self.set_border_width(10)
@@ -21,6 +23,12 @@ class YouTubePlayer(Gtk.Window) :
         ## Main Box: All widgets are inside this
         self.mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=6)
         ##
+
+        #Label
+
+        self.infoLabel = Gtk.Label("YouTubePlayer")
+        self.mainBox.pack_start(self.infoLabel, True, True, 0)
+        #
 
         #Input box
         self.entry = Gtk.Entry()
@@ -108,8 +116,10 @@ class YouTubePlayer(Gtk.Window) :
             vid = pafy.new(url)
             video_url = vid.getbest().url
 
+            self.infoLabel.set_text(vid.title)
+
             if self.AUDIO_ONLY == True :
-                self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
+                self.vlcShell = subprocess.Popen('cvlc --vout none --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
             else :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
 
@@ -145,33 +155,39 @@ class YouTubePlayer(Gtk.Window) :
         #must use threading
         url = self.entry.get_text()
         if 'list=' not in url:
-            ytvideo = False
-            try: # check if given url is really a url or just a search term
-                video=pafy.new(url)
-                ytvideo=True
-            except ValueError as e:
-                print(e)
-                ytvideo = False
+            video = pafy.new(url)
 
-            # already done above for True case
-            if ytvideo == False:
-                query_string = urllib.parse.urlencode({"search_query" : url})
-                response = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + query_string)
-                html_content=response.read().decode(response.headers.get_content_charset())
-                i = str(html_content).index("watch?")
-                search_results = html_content[i+8: i+19]
-                video=pafy.new(search_results)
 
             if self.AUDIO_ONLY == True :
-                video.getbestaudio().download(filepath=video.title+'.'+video.getbestaudio().extension, quiet=False)
+                self.downloadThread = threading.Thread(target=self._downloadAudio, args=[video])
+                try :
+                    self.downloadThread.start()
+
+                except FileNotFoundError :
+                    os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
+                    self.downloadThread.start()
+
             else:
-                video.getbest().download(filepath=video.title+'[audio].'+video.getbest().extension, quiet=False)
+                self.downloadThread = threading.Thread(target=self._download, args=[video])
+                try :
+                    self.downloadThread.start()
+                except FileNotFoundError:
+                    os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
+                    self.downloadThread.start()
             return
 
         else:
             # download using youtube-dl
             pass
         return
+
+    def _setdownloadETA(self, a, b, percentage, d, ETA) :
+        self.infoLabel.set_text('Completed : '+str(int(percentage*100))+' ETA : '+str(int(ETA))+'s')
+    def _downloadAudio(self, video) :
+        video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+
+    def _download(self, video) :
+        video.getbest(preftype="mp4").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'.'+video.getbest().extension, quiet=False, callback=self._setdownloadETA)
 
     def audioOnly(self, widget) :
         self.AUDIO_ONLY = widget.get_active()
