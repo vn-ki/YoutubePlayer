@@ -12,10 +12,10 @@ def getplaylist(url):
     html_content=response.read().decode(response.headers.get_content_charset())
     for i in range(len(html_content)):
         if html_content[i:i+6]=='watch?':
-            playlist.append('http://www.youtube.com/watch?v='+html_content[i+8:i+19])
+            playlist.append('https://www.youtube.com/watch?v='+html_content[i+8:i+19])
     return tuple(playlist)
-    
-    
+
+
 class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
 
@@ -103,46 +103,48 @@ class YouTubePlayer(Gtk.Window) :
 
     def openVLC(self,url) :
         if 'list=' not in url: #not a playlist
-            
+
             ytvideo = False
             try: # check if given url is really a url or just a search term
                 getyt=pafy.new(url)
                 ytvideo=True
             except ValueError as e:
-                print(e) 
+                print(e)
                 ytvideo = False
-            
+
             if ytvideo == True: #it is a video
-                video_url = url
+                video_url = getyt.getbest().url
             else : # not a video
                 query_string = urllib.parse.urlencode({"search_query" : url})
-                response = urllib.request.urlopen("http://www.youtube.com/results?search_query=" + query_string)
+                response = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + query_string)
                 html_content=response.read().decode(response.headers.get_content_charset())
                 i = str(html_content).index("watch?")
-                search_results = html_content[i+8: i+20]
-                video_url= "http://www.youtube.com/watch?v=" + search_results
-                
+                search_results = html_content[i+8: i+19]
+                video_url= pafy.new(search_results).getbest().url
+
             if self.AUDIO_ONLY == True :
                 self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
             else :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
-                
+
         else: # A playlist
-            #just checking
-            playlist=getplaylist(url)
-            video_url = playlist[0]
-            #You'll most propably have to use threading module
-            #while playing playlist
-            #Try looking into that.
-            #Else I can do it.
-            #And use get_playlist2() and iterate through it
-            #rather than using get_playlist()
+            videoindex = 0
+            pl = []
+            playlist = pafy.get_playlist2(url)
+            for i in playlist:
+                try:    # playlists often have links to those videos which do not exist
+                    pl.append(i.getbest().url)
+                except:
+                    break
+            video_url = pl[videoindex]
+            #takes too long to load
+            #will use threads
             if self.AUDIO_ONLY == True :
                 self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
             else :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
             return
-            
+
     def next(self, widget) :
         self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
         self.vlcShell.stdin.flush()
@@ -154,7 +156,6 @@ class YouTubePlayer(Gtk.Window) :
         return
 
     def download(self, widget) :
-        #I'll do it, later.
         return
 
     def audioOnly(self, widget) :
