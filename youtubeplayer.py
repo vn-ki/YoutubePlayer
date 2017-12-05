@@ -7,16 +7,6 @@ import threading
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
-def getplaylist(url):
-    playlist=[]
-    response = urllib.request.urlopen(url)
-    html_content=response.read().decode(response.headers.get_content_charset())
-    for i in range(len(html_content)):
-        if html_content[i:i+6]=='watch?':
-            playlist.append('https://www.youtube.com/watch?v='+html_content[i+8:i+19])
-    return tuple(playlist)
-
-
 class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
 
@@ -97,31 +87,26 @@ class YouTubePlayer(Gtk.Window) :
         if url!='' :
             self.openVLC(url)
 
-
-        #else do play pause using lib vlc
-
         return
 
     def openVLC(self,url) :
+
+        if url[0] == '/' :
+            if url[1] == '/' :
+                # Search for playlist
+                # Yet to implement
+                # Planning to use bs4
+                # Tarun, if you can use urllib and search to find
+                # it do it
+                return
+
+            else :
+                #Search for video
+                url = self._getFirstYTResultURL(url[1:])
+
         if 'list=' not in url: #not a playlist
-
-            ytvideo = False
-            try: # check if given url is really a url or just a search term
-                getyt=pafy.new(url)
-                ytvideo=True
-            except ValueError as e:
-                print(e)
-                ytvideo = False
-
-            if ytvideo == True: #it is a video
-                video_url = getyt.getbest().url
-            else : # not a video
-                query_string = urllib.parse.urlencode({"search_query" : url})
-                response = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + query_string)
-                html_content=response.read().decode(response.headers.get_content_charset())
-                i = str(html_content).index("watch?")
-                search_results = html_content[i+8: i+19]
-                video_url= pafy.new(search_results).getbest().url
+            vid = pafy.new(url)
+            video_url = vid.getbest().url
 
             if self.AUDIO_ONLY == True :
                 self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
@@ -141,7 +126,7 @@ class YouTubePlayer(Gtk.Window) :
             #takes too long to load
             #will use threads
             if self.AUDIO_ONLY == True :
-                self.vlcShell = subprocess.Popen('cvlc --no-video --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
+                self.vlcShell = subprocess.Popen('cvlc --vout none --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
             else :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
             return
@@ -167,22 +152,22 @@ class YouTubePlayer(Gtk.Window) :
             except ValueError as e:
                 print(e)
                 ytvideo = False
-                
+
             # already done above for True case
-            if ytvideo == False: 
+            if ytvideo == False:
                 query_string = urllib.parse.urlencode({"search_query" : url})
                 response = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + query_string)
                 html_content=response.read().decode(response.headers.get_content_charset())
                 i = str(html_content).index("watch?")
                 search_results = html_content[i+8: i+19]
                 video=pafy.new(search_results)
-                
+
             if self.AUDIO_ONLY == True :
                 video.getbestaudio().download(filepath=video.title+'.'+video.getbestaudio().extension, quiet=False)
             else:
                 video.getbest().download(filepath=video.title+'[audio].'+video.getbest().extension, quiet=False)
             return
-                
+
         else:
             # download using youtube-dl
             pass
@@ -191,3 +176,14 @@ class YouTubePlayer(Gtk.Window) :
     def audioOnly(self, widget) :
         self.AUDIO_ONLY = widget.get_active()
         return
+
+    def _getFirstYTResultURL(self, query)  :
+        query_string = urllib.parse.urlencode({"search_query" : query})
+        response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
+        html_content=response.read().decode(response.headers.get_content_charset())
+        i = str(html_content).index("watch?")
+
+        search_results = html_content[i+8: i+19]
+    #    video_url= pafy.new(search_results).getbest().url
+
+        return search_results
