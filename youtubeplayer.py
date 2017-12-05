@@ -2,6 +2,7 @@ import gi
 import subprocess
 import pafy
 import urllib
+import threading
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
@@ -150,12 +151,41 @@ class YouTubePlayer(Gtk.Window) :
         self.vlcShell.stdin.flush()
         return
 
-    def previous(self, widget) :
+    def previous(self, widget):
         self.vlcShell.stdin.write(bytes('prev\n', 'utf-8'))
         self.vlcShell.stdin.flush()
         return
 
     def download(self, widget) :
+        #must use threading
+        url = self.entry.get_text()
+        if 'list=' not in url:
+            ytvideo = False
+            try: # check if given url is really a url or just a search term
+                video=pafy.new(url)
+                ytvideo=True
+            except ValueError as e:
+                print(e)
+                ytvideo = False
+                
+            # already done above for True case
+            if ytvideo == False: 
+                query_string = urllib.parse.urlencode({"search_query" : url})
+                response = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + query_string)
+                html_content=response.read().decode(response.headers.get_content_charset())
+                i = str(html_content).index("watch?")
+                search_results = html_content[i+8: i+19]
+                video=pafy.new(search_results)
+                
+            if self.AUDIO_ONLY == True :
+                video.getbestaudio().download(filepath=video.title+'.'+video.getbestaudio().extension, quiet=False)
+            else:
+                video.getbest().download(filepath=video.title+'[audio].'+video.getbest().extension, quiet=False)
+            return
+                
+        else:
+            # download using youtube-dl
+            pass
         return
 
     def audioOnly(self, widget) :
