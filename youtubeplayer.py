@@ -129,17 +129,14 @@ class YouTubePlayer(Gtk.Window) :
 
     def openVLC(self,url) :
 
-        if url[0] == '/' :
+        if url[0] == '/' : # search term
             if url[1] == '/' :
                 # Search for playlist
-                # Yet to implement
-                # Planning to use bs4
-                # Tarun, if you can use urllib and search to find
-                # it do it
-                return
-
+                self.infoLabel.set_text("Searching for playlist")
+                url = self._getFirstYTResultURL_PL(url[2:])
             else :
                 #Search for video
+                self.infoLabel.set_text("Searching for video")
                 url = self._getFirstYTResultURL(url[1:])
 
         if 'list=' not in url: #not a playlist
@@ -238,8 +235,18 @@ class YouTubePlayer(Gtk.Window) :
         response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
         html_content=response.read().decode(response.headers.get_content_charset())
         i = str(html_content).index("watch?")
-
         search_results = html_content[i+8: i+19]
-    #    video_url= pafy.new(search_results).getbest().url
+        return search_results
 
+    def _getFirstYTResultURL_PL(self, query) :
+        query_string = urllib.parse.urlencode({"search_query" :  'playlist ' + query})
+        response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string + "&sp=EgIQAw%253D%253D")
+        html_content=response.read().decode(response.headers.get_content_charset())
+        i = str(html_content).index("list=") + 5
+        search_results='https://www.youtube.com/playlist?list='
+        while html_content[i]!='\"':
+            search_results+=html_content[i]
+            i=i+1
+
+        self.infoLabel.set_text(search_results)
         return search_results
