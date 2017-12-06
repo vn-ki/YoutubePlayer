@@ -8,7 +8,8 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 ## Dependencies
 - [Python 3](https://www.python.org/download/releases/3.0/)
 - [Pafy](https://pypi.python.org/pypi/pafy)
-- [youtube-dl](https://github.com/rg3/youtube-dl) (Optional, highly recomended)
+- [youtube-dl](https://github.com/rg3/youtube-dl)
+- [pyGObject](https://pygobject.readthedocs.io/en/latest/)
 
 ## Installation
 Install the dependencies.
@@ -35,5 +36,5 @@ $ ./main.py
 ## Upcoming features
 
 - Better support for windows.
-- Improved search
-- More download options
+- Improved search.
+- More download options.
