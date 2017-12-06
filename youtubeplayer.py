@@ -17,11 +17,11 @@ class YouTubePlayer(Gtk.Window) :
 
         Gtk.Window.__init__(self, title="YouTube Player")
         self.set_border_width(10)
-        self.set_size_request(400, 100)
+        self.set_default_size(400, 100)
 
         ####################################################################
         ## Main Box: All widgets are inside this
-        self.mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=6)
+        self.mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
         ##
 
         #Label
@@ -57,6 +57,7 @@ class YouTubePlayer(Gtk.Window) :
         #
 
         self.buttonBox = Gtk.Box(spacing=10)
+        self.buttonBox.set_border_width(20)
         self.mainBox.pack_start(self.buttonBox, True,True, 0)
         self.add(self.mainBox)
 
@@ -94,6 +95,9 @@ class YouTubePlayer(Gtk.Window) :
 
         if url!='' :
             self.openVLC(url)
+            return
+
+        self.infoLabel.set_text("URL field is empty.")
 
         return
 
@@ -142,18 +146,29 @@ class YouTubePlayer(Gtk.Window) :
             return
 
     def next(self, widget) :
-        self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
-        self.vlcShell.stdin.flush()
+        try :
+            self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
+            self.vlcShell.stdin.flush()
+
+        except AttributeError :
+            self.infoLabel.set_text("Play something first.")
         return
 
     def previous(self, widget):
-        self.vlcShell.stdin.write(bytes('prev\n', 'utf-8'))
-        self.vlcShell.stdin.flush()
+        try :
+            self.vlcShell.stdin.write(bytes('prev\n', 'utf-8'))
+            self.vlcShell.stdin.flush()
+
+        except AttributeError :
+            self.infoLabel.set_text("Play something first.")
         return
 
     def download(self, widget) :
         #must use threading
         url = self.entry.get_text()
+        if url == '' :
+            self.infoLabel.set_text("I can't download nothing. XD")
+            return
         if 'list=' not in url:
             video = pafy.new(url)
 
