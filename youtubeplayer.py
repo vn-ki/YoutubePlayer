@@ -4,6 +4,7 @@ import pafy
 import urllib
 import threading
 import os
+from time import sleep
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gio
@@ -14,6 +15,7 @@ class YouTubePlayer(Gtk.Window) :
         self.AUDIO_ONLY = False
         self.vlcShell = None
         self.downloadThread = None
+        self.playlistThread = None
 
         Gtk.Window.__init__(self, title="YouTubePlayer")
         self.set_border_width(10)
@@ -65,10 +67,16 @@ class YouTubePlayer(Gtk.Window) :
         self.downloadButton.connect('clicked', self.download)
         dliBox.pack_start(self.downloadButton, True,True,0)
 
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="help-about-symbolic"), Gtk.IconSize.BUTTON)
-        self.downloadButton = Gtk.Button( image=img, name='download-button')
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-stop-symbolic"), Gtk.IconSize.BUTTON)
+        self.downloadButton = Gtk.Button( image=img, name='quitvlc-button')
         self.downloadButton.set_property("width-request", 30)
-        self.downloadButton.connect('clicked', self.download)
+        self.downloadButton.connect('clicked', self._quitVLC)
+        dliBox.pack_start(self.downloadButton, True,True,0)
+
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="help-about-symbolic"), Gtk.IconSize.BUTTON)
+        self.downloadButton = Gtk.Button( image=img, name='help-button')
+        self.downloadButton.set_property("width-request", 30)
+        self.downloadButton.connect('clicked', self._showHelp)
         dliBox.pack_start(self.downloadButton, True,True,0)
         #############################################################
 
@@ -78,7 +86,6 @@ class YouTubePlayer(Gtk.Window) :
 
         self.buttonBox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         Gtk.StyleContext.add_class(self.buttonBox.get_style_context(), "linked")
-    #    self.mainBox.pack_start(self.buttonBox, True,True, 0)
         self.add(mainBox)
 
         #Previous button
@@ -88,7 +95,6 @@ class YouTubePlayer(Gtk.Window) :
         self.buttonBox.pack_start(self.prevButton, True, True, 0)
 
         #Play button
-    #    img = Gtk.Image.new_from_file("images/icons/youtube-icon.png")
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
         self.playButton = Gtk.Button(image=img, name='play-button')
         self.playButton.connect('clicked', self.play)
@@ -107,24 +113,41 @@ class YouTubePlayer(Gtk.Window) :
         url = self.entry.get_text()
 
         if self.vlcShell != None :
-            if self.playButton.get_label() == 'Play' :
-                self.vlcShell.stdin.write(bytes('play\n', 'utf-8'))
-                self.playButton.set_label('Pause')
-            else :
-                self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
-                self.playButton.set_label('Play')
+            self.vlcShell.stdin.write(bytes('status\n', 'utf-8'))
             try :
                 self.vlcShell.stdin.flush()
+                x = ''
+                for x in iter(self.vlcShell.stdout.readline, b''):
+                    x = str(x, 'utf-8')
+                    if 'state' in x :
+                        break
+                x = x.split(' ')
+                if x[2] == 'playing' :
+                    img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
+                    self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
+                    self.playButton.set_image(img)
+
+                elif x[2]=='stopped':
+                    self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
+
+                else :
+                    img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
+                    self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
+                    self.playButton.set_image(img)
+
+                self.vlcShell.stdin.flush()
                 return
-            except BrokenPipeError :
+            except BrokenPipeError:
                 self.vlcShell = None
 
-        if url!='' :
-            self.openVLC(url)
+        if url == '' :
+            self.infoLabel.set_text("URL field is empty.")
             return
 
-        self.infoLabel.set_text("URL field is empty.")
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
+        self.playButton.set_image(img)
 
+        self.openVLC(url)
         return
 
     def openVLC(self,url) :
@@ -141,36 +164,26 @@ class YouTubePlayer(Gtk.Window) :
 
         if 'list=' not in url: #not a playlist
             vid = pafy.new(url)
-            video_url = vid.getbest().url
 
             self.infoLabel.set_text(vid.title)
 
             if self.AUDIO_ONLY == True :
-                self.vlcShell = subprocess.Popen('cvlc --vout none --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
+                video_url = vid.getbestaudio().url
+                self.vlcShell = subprocess.Popen('cvlc --vout none --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
             else :
-                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
+                video_url = vid.getbest().url
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
 
         else: # A playlist
-            videoindex = 0
-            pl = []
             playlist = pafy.get_playlist2(url)
-            for i in playlist:
-                try:    # playlists often have links to those videos which do not exist
-                    pl.append(i.getbest().url)
-                except:
-                    break
-            video_url = pl[videoindex]
-            #takes too long to load
-            #will use threads
-            if self.AUDIO_ONLY == True :
-                self.vlcShell = subprocess.Popen('cvlc --vout none --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
-            else :
-                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE)
-            return
+            self.infoLabel.set_text(playlist.title)
+            self.playlistThread = threading.Thread(target=self._playPlaylist, args=[playlist])
+            self.playlistThread.start()
+
 
     def next(self, widget) :
         try :
-            self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
+            self.vlcShell.stdin.write(bytes('stop\n', 'utf-8'))
             self.vlcShell.stdin.flush()
 
         except AttributeError :
@@ -250,3 +263,45 @@ class YouTubePlayer(Gtk.Window) :
 
         self.infoLabel.set_text(search_results)
         return search_results
+
+    def _playPlaylist(self, playlist) :
+        for i in playlist:
+            try:    # playlists often have links to those videos which do not exist
+                self.infoLabel.set_text(i.title)
+                if self.AUDIO_ONLY == True :
+                    video_url = i.getbestaudio().url
+                    self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+                else :
+                    video_url = i.getbest().url
+                    self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+            except:
+                break
+            while True :
+                sleep(1)
+                self.vlcShell.stdin.write(bytes('status\n', 'utf-8'))
+                self.vlcShell.stdin.flush()
+                x = ''
+                for x in iter(self.vlcShell.stdout.readline, b''):
+                    x = str(x, 'utf-8')
+                    if 'state' in x :
+                        break
+                x = x.split(' ')
+                if x[2] == 'stopped' :
+                    break
+
+        return
+
+    def _showHelp(self, widget) :
+        return
+
+    def _quitVLC(self, widget) :
+        try :
+            self.vlcShell.stdin.write('q\n')
+            self.vlcShell.stdin.flush()
+
+        except AttributeError :
+            self.infoLabel.set_text("VLC is not running.")
+        except BrokenPipeError :
+            img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
+            self.playButton.set_image(img)
+            self.vlcShell = None
