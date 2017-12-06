@@ -1,18 +1,5 @@
-button#prev-button {
+button#youtube-button {
   border-image: none;
   background-image: none;
-  background-color: #DCDCDC;
+  background-color: white;
 }
-
-button#next-button {
-  border-image: none;
-  background-image: none;
-  background-color: #DCDCDC;
-}
-
-button#play-button {
-  border-image: none;
-  background-image: none;
-  background-color: #DCDCDC;
-}
-

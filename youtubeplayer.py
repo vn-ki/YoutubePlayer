@@ -6,6 +6,8 @@ import threading
 import os
 from time import sleep
 
+import helpwindow
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gio
 
@@ -292,6 +294,10 @@ class YouTubePlayer(Gtk.Window) :
         return
 
     def _showHelp(self, widget) :
+        window = helpwindow.helpWindow()
+        window.connect("delete-event", Gtk.main_quit)
+        window.show_all()
+        Gtk.main()
         return
 
     def _quitVLC(self, widget) :
