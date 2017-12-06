@@ -201,20 +201,11 @@ class YouTubePlayer(Gtk.Window) :
 
             if self.AUDIO_ONLY == True :
                 self.downloadThread = threading.Thread(target=self._downloadAudio, args=[video])
-                try :
-                    self.downloadThread.start()
-
-                except FileNotFoundError :
-                    os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
-                    self.downloadThread.start()
+                self.downloadThread.start()
 
             else:
                 self.downloadThread = threading.Thread(target=self._download, args=[video])
-                try :
-                    self.downloadThread.start()
-                except FileNotFoundError:
-                    os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
-                    self.downloadThread.start()
+                self.downloadThread.start()
             return
 
         else:
@@ -225,10 +216,18 @@ class YouTubePlayer(Gtk.Window) :
     def _setdownloadETA(self, a, b, percentage, d, ETA) :
         self.infoLabel.set_text('Completed : '+str(int(percentage*100))+' ETA : '+str(int(ETA))+'s')
     def _downloadAudio(self, video) :
-        video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+        try :
+            video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+        except FileNotFoundError :
+            os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
+            video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
 
     def _download(self, video) :
-        video.getbest(preftype="mp4").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'.'+video.getbest().extension, quiet=False, callback=self._setdownloadETA)
+        try :
+            video.getbest(preftype="mp4").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'.'+video.getbest().extension, quiet=False, callback=self._setdownloadETA)
+        except FileNotFoundError :
+            os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
+            video.getbest(preftype="mp4").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'.'+video.getbest().extension, quiet=False, callback=self._setdownloadETA)
 
     def audioOnly(self, widget) :
         self.AUDIO_ONLY = widget.get_active()
