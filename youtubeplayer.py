@@ -177,8 +177,8 @@ class YouTubePlayer(Gtk.Window) :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
 
         else: # A playlist
-            playlist = pafy.get_playlist2(url)
-            self.infoLabel.set_text(playlist.title)
+            playlist = pafy.get_playlist(url)
+            self.infoLabel.set_text(playlist['title'])
             self.playlistThread = threading.Thread(target=self._playPlaylist, args=[playlist])
             self.playlistThread.start()
 
@@ -267,17 +267,17 @@ class YouTubePlayer(Gtk.Window) :
         return search_results
 
     def _playPlaylist(self, playlist) :
-        for i in playlist:
+        for i in playlist['items']:
             try:    # playlists often have links to those videos which do not exist
-                self.infoLabel.set_text(i.title)
+                self.infoLabel.set_text(i['pafy'].title)
                 if self.AUDIO_ONLY == True :
-                    video_url = i.getbestaudio().url
+                    video_url = i['pafy'].getbestaudio().url
                     self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
                 else :
-                    video_url = i.getbest().url
+                    video_url = i['pafy'].getbest().url
                     self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
             except:
-                break
+                continue
             while True :
                 sleep(1)
                 self.vlcShell.stdin.write(bytes('status\n', 'utf-8'))
