@@ -15,6 +15,7 @@ class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
 
         self.AUDIO_ONLY = False
+        self.MINIMAL_INTERFACE = True
         self.vlcShell = None
         self.downloadThread = None
         self.playlistThread = None
@@ -60,6 +61,10 @@ class YouTubePlayer(Gtk.Window) :
         self.audioOnlyButton.connect('toggled', self.audioOnly)
         checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
 
+        self.mininalInterfaceButton = Gtk.CheckButton("Minimal Interface")
+        self.mininalInterfaceButton.set_active(True)
+        self.mininalInterfaceButton.connect('toggled', self._mininalInterface)
+        checkButtonBox.pack_start(self.mininalInterfaceButton, True, True,0)
 
         #Download and info Box
         dliBox = Gtk.Box(spacing=10)
@@ -210,6 +215,17 @@ class YouTubePlayer(Gtk.Window) :
     def download(self, widget) :
         #must use threading
         url = self.entry.get_text()
+
+        if url[0] == '/' : # search term
+            if url[1] == '/' :
+                # Search for playlist
+                self.infoLabel.set_text("Searching for playlist")
+                url = self._getFirstYTResultURL_PL(url[2:])
+            else :
+                #Search for video
+                self.infoLabel.set_text("Searching for video")
+                url = self._getFirstYTResultURL(url[1:])
+
         if url == '' :
             self.infoLabel.set_text("I can't download nothing. XD")
             return
@@ -233,6 +249,8 @@ class YouTubePlayer(Gtk.Window) :
 
     def _setdownloadETA(self, a, b, percentage, d, ETA) :
         self.infoLabel.set_text('Completed : '+str(int(percentage*100))+' ETA : '+str(int(ETA))+'s')
+        self.entry.set_progress_fraction(percentage)
+        
     def _downloadAudio(self, video) :
         try :
             video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
@@ -249,6 +267,10 @@ class YouTubePlayer(Gtk.Window) :
 
     def audioOnly(self, widget) :
         self.AUDIO_ONLY = widget.get_active()
+        if self.AUDIO_ONLY:
+            self.mininalInterfaceButton.set_sensitive(False)
+        else :
+            self.mininalInterfaceButton.set_sensitive(True)
         return
 
     def _getFirstYTResultURL(self, query)  :
@@ -326,9 +348,17 @@ class YouTubePlayer(Gtk.Window) :
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
             self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+
         else :
             try :
                 video_url = video.getbest().url
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
-            self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+            if MINIMAL_INTERFACE :
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+            else :
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+
+
+    def _mininalInterface(self, widget) :
+        self.MINIMAL_INTERFACE = widget.get_active()

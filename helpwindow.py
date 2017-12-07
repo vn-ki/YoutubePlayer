@@ -6,13 +6,14 @@ class helpWindow(Gtk.Window) :
     def __init__(self) :
         Gtk.Window.__init__(self, title='Help')
         self.set_border_width(10)
-        self.set_size_request(400, 500)
+        self.set_size_request(400, 400)
 
         mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(mainBox)
 
         img = Gtk.Image.new_from_file('images/icons/youtube-icon.png')
         youtubeButton = Gtk.Button(name="youtube-button", image=img)
+        youtubeButton.connect('clicked', self.buttonClicked)
         mainBox.pack_start(youtubeButton, True, True, 0)
 
         infoLabel = Gtk.Label()
@@ -39,3 +40,6 @@ class helpWindow(Gtk.Window) :
         )
 
         mainBox.pack_start(infoLabel, True, True, 0)
+
+    def buttonClicked(self, widget) :
+        return
