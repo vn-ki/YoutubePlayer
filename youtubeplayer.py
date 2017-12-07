@@ -11,6 +11,8 @@ import helpwindow
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gio
 
+oldURL = None
+
 class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
 
@@ -140,7 +142,9 @@ class YouTubePlayer(Gtk.Window) :
         headerBar.pack_end(self.totalTime)
 
         self.seekThread = threading.Thread(target=self._setSeekBar)
+        self.seekThread.setDaemon(True)
         self.seekThread.start()
+
 
 
         #############################################################
@@ -153,9 +157,13 @@ class YouTubePlayer(Gtk.Window) :
 
     def play(self, widget) :
         url = self.entry.get_text()
-        self.clickCounter += 1
+        global oldURL
+        if (oldURL == url or url == '') and self.vlcShell != None:
+            self.clickCounter += 1
 
-        if self.vlcShell != None :
+            if url != '' :
+                oldURL = url
+
             if self.clickCounter%2 == 0 :
                 img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
                 self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
@@ -239,6 +247,10 @@ class YouTubePlayer(Gtk.Window) :
         #must use threading
         url = self.entry.get_text()
 
+        if url == '' :
+            self.infoLabel.set_text("I can't download nothing. XD")
+            return
+
         if url[0] == '/' : # search term
             if url[1] == '/' :
                 # Search for playlist
@@ -249,19 +261,19 @@ class YouTubePlayer(Gtk.Window) :
                 self.infoLabel.set_text("Searching for video")
                 url = self._getFirstYTResultURL(url[1:])
 
-        if url == '' :
-            self.infoLabel.set_text("I can't download nothing. XD")
-            return
+
         if 'list=' not in url:
             video = pafy.new(url)
 
 
             if self.AUDIO_ONLY == True :
                 self.downloadThread = threading.Thread(target=self._downloadAudio, args=[video])
+                self.downloadThread.setDaemon(True)
                 self.downloadThread.start()
 
             else:
                 self.downloadThread = threading.Thread(target=self._download, args=[video])
+                self.downloadThread.setDaemon(True)
                 self.downloadThread.start()
             return
 
@@ -276,10 +288,10 @@ class YouTubePlayer(Gtk.Window) :
 
     def _downloadAudio(self, video) :
         try :
-            video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+            video.getbestaudio(preftype="m4a").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
         except FileNotFoundError :
             os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
-            video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+            video.getbestaudio(preftype="m4a").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
 
     def _download(self, video) :
         try :
@@ -327,6 +339,7 @@ class YouTubePlayer(Gtk.Window) :
         self.playlistNames += [firstVideo.title]
 
         self.playlistThread = threading.Thread(target=self._addPlaylistItemsToVLCShell, args=[playlist])
+        self.playlistThread.setDaemon(True)
         self.playlistThread.start()
 
     def _addPlaylistItemsToVLCShell(self, playlist) :
@@ -371,7 +384,7 @@ class YouTubePlayer(Gtk.Window) :
                 video_url = video.getbestaudio().url
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
-            self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+            self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc --meta-title '.split()+['"'+video.title+'"']+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
 
         else :
             try :
@@ -379,7 +392,7 @@ class YouTubePlayer(Gtk.Window) :
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
             if self.MINIMAL_INTERFACE :
-                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc --meta-title'.split()+['"'+video.title+'"']+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
             else :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
 
@@ -422,10 +435,10 @@ class YouTubePlayer(Gtk.Window) :
                 self.seekBar.set_value(int((float(currentTime)/totalTime)*100))
 
             except BrokenPipeError :
-                print('Error')
+                continue
 
             except AttributeError :
-                print('Attri')
+                continue
 
     def _secondsToTime(self, seconds) :
         t = ''

@@ -1,5 +1,5 @@
 # YoutubePlayer
-Play videos from YouTube directly using vlc with the ability to stream audio only.
+Play videos from YouTube directly using vlc with the ability to stream audio only. Built on Gtk 3.
 
 <p align="center">
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
@@ -32,9 +32,17 @@ $ ./main.py
 - If you want to search for the video, type ```/<search_query>``` in the url input and press play. The top search result should start playing.
 - If you want to search for a playlist instead of a video, type ```//<search_query>``` in the url input and press play.
 - The download feature (for now) downloads the best available quality. The downloaded file will be available in ```~/Downloads/YouTubePlayer/``` directory.
+- Press the stop button to stop the running instance of vlc. Ideally this should be done before playing a new video, but is not necessary.
+- The help page includes the above information.
+
+## Known Issues
+
+- The UI is unresponsive while loading a video. (This bug is low priority and propably will never be fixed)
+- The seek bar functions awkwardly at times.
 
 ## Upcoming features
 
-- Better support for windows.
 - Improved search.
 - More download options.
+- Support for more players. (mpv)
+- Better support for windows (Chances are thin).
