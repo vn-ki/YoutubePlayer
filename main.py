@@ -18,5 +18,5 @@ import youtubeplayer
 
 window = youtubeplayer.YouTubePlayer()
 window.connect("delete-event", Gtk.main_quit)
-window.show_all()
+window.show()
 Gtk.main()

@@ -21,17 +21,19 @@ class YouTubePlayer(Gtk.Window) :
         self.playlistThread = None
         self.playlistNames = []
         self.vidNo = 0
+        self.clickCounter = 0
 
 
-        Gtk.Window.__init__(self, title="YouTubePlayer")
+        Gtk.Window.__init__(self)
         self.set_border_width(10)
         self.set_size_request(500, 100)
 
         #Title bar tweaks
         headerBar = Gtk.HeaderBar()
         headerBar.set_show_close_button(True)
-        headerBar.props.title = ""
+        headerBar.props.title = None
         self.set_titlebar(headerBar)
+        self.set_resizable(False)
         #
 
         ####################################################################
@@ -116,38 +118,58 @@ class YouTubePlayer(Gtk.Window) :
         self.nextButton.connect('clicked', self.next)
         self.buttonBox.pack_start(self.nextButton, True, True, 0)
 
+        adj = Gtk.Adjustment(0.0, 0.0, 100.0, 1.0, 10.0, 10.0)
+
+        self.currentTime = Gtk.Label("0:00")
+        self.totalTime = Gtk.Label("0:00")
+
+        self.seekBar = Gtk.Scale.new(Gtk.Orientation.HORIZONTAL, adj)
+        self.seekBar.set_hexpand(True)
+        self.seekBar.set_draw_value(False)
+        self.seekBar.set_property("width-request", 150)
+        self.seekBar.set_digits(1)
+        self.seekBar.set_value(100)
+
         headerBar.pack_start(self.buttonBox)
+        headerBar.set_has_subtitle(False)
+        headerBar.set_custom_title(self.seekBar)
+        headerBar.set_decoration_layout('menu:close')
+        headerBar.pack_start(self.currentTime)
+
+    #    seekBox.pack_start(self.seekBar, True, True, 0)
+        headerBar.pack_end(self.totalTime)
+
+        self.seekThread = threading.Thread(target=self._setSeekBar)
+        self.seekThread.start()
+
+
         #############################################################
+
+    def show(self) :
+        self.show_all()
+        self.seekBar.hide()
+        self.currentTime.hide()
+        self.totalTime.hide()
 
     def play(self, widget) :
         url = self.entry.get_text()
+        self.clickCounter += 1
 
         if self.vlcShell != None :
-            self.vlcShell.stdin.write(bytes('status\n', 'utf-8'))
+            if self.clickCounter%2 == 0 :
+                img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
+                self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
+                self.playButton.set_image(img)
+
+            else :
+                img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
+                self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
+                self.playButton.set_image(img)
+
             try :
                 self.vlcShell.stdin.flush()
-                x = ''
-                for x in iter(self.vlcShell.stdout.readline, b''):
-                    x = str(x, 'utf-8')
-                    if 'state' in x :
-                        break
-                x = x.split(' ')
-                if x[2] == 'playing' :
-                    img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
-                    self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
-                    self.playButton.set_image(img)
-
-                elif x[2]=='stopped':
-                    self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
-
-                else :
-                    img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
-                    self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
-                    self.playButton.set_image(img)
-
-                self.vlcShell.stdin.flush()
                 return
-            except BrokenPipeError:
+            except BrokenPipeError :
                 self.vlcShell = None
 
         if url == '' :
@@ -205,6 +227,7 @@ class YouTubePlayer(Gtk.Window) :
             self.vidNo -= 1
             try :
                 self.infoLabel.set_text(self.playlistNames[self.vidNo])
+
             except :
                 return
 
@@ -250,7 +273,7 @@ class YouTubePlayer(Gtk.Window) :
     def _setdownloadETA(self, a, b, percentage, d, ETA) :
         self.infoLabel.set_text('Completed : '+str(int(percentage*100))+' ETA : '+str(int(ETA))+'s')
         self.entry.set_progress_fraction(percentage)
-        
+
     def _downloadAudio(self, video) :
         try :
             video.getbestaudio().download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
@@ -342,6 +365,7 @@ class YouTubePlayer(Gtk.Window) :
 
     def _openVLCShell(self, video) :
         self.infoLabel.set_text(video.title)
+
         if self.AUDIO_ONLY == True :
             try :
                 video_url = video.getbestaudio().url
@@ -354,11 +378,62 @@ class YouTubePlayer(Gtk.Window) :
                 video_url = video.getbest().url
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
-            if MINIMAL_INTERFACE :
+            if self.MINIMAL_INTERFACE :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
             else :
                 self.vlcShell = subprocess.Popen('vlc --no-video-title --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
 
 
+        self.currentTime.show()
+        self.seekBar.show()
+        self.totalTime.show()
+
     def _mininalInterface(self, widget) :
         self.MINIMAL_INTERFACE = widget.get_active()
+
+    def _setSeekBar(self) :
+        while True :
+            sleep(1)
+
+            try :
+                self.vlcShell.stdout.flush()
+                self.vlcShell.stdin.write(bytes('get_length\n', 'utf-8'))
+                self.vlcShell.stdin.flush()
+                c=0
+                totalTime=0
+                x = self.vlcShell.stdout.readline()
+                try :
+                    totalTime = int(str(x, 'utf-8')[2:-2])
+                except ValueError :
+                    continue
+                if totalTime == 0 :
+                    totalTime = 1
+                self.totalTime.set_text(self._secondsToTime(totalTime))
+
+                self.vlcShell.stdin.write(bytes('get_time\n', 'utf-8'))
+                self.vlcShell.stdin.flush()
+                x = self.vlcShell.stdout.readline()
+                try :
+                    currentTime = int(str(x, 'utf-8')[2:-2])
+                except ValueError :
+                    continue
+                self.currentTime.set_text(self._secondsToTime(currentTime))
+
+                self.seekBar.set_value(int((float(currentTime)/totalTime)*100))
+
+            except BrokenPipeError :
+                print('Error')
+
+            except AttributeError :
+                print('Attri')
+
+    def _secondsToTime(self, seconds) :
+        t = ''
+        t += str(int(seconds/60))
+        t += ':'
+        if seconds%60 <10:
+            t+='0'+str(seconds%60)
+
+        else :
+            t += str(seconds%60)
+        return t
