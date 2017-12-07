@@ -18,6 +18,9 @@ class YouTubePlayer(Gtk.Window) :
         self.vlcShell = None
         self.downloadThread = None
         self.playlistThread = None
+        self.playlistNames = []
+        self.vidNo = 0
+
 
         Gtk.Window.__init__(self, title="YouTubePlayer")
         self.set_border_width(10)
@@ -167,26 +170,24 @@ class YouTubePlayer(Gtk.Window) :
         if 'list=' not in url: #not a playlist
             vid = pafy.new(url)
 
-            self.infoLabel.set_text(vid.title)
 
-            if self.AUDIO_ONLY == True :
-                video_url = vid.getbestaudio().url
-                self.vlcShell = subprocess.Popen('cvlc --vout none --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
-            else :
-                video_url = vid.getbest().url
-                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
 
+            self._openVLCShell(vid)
         else: # A playlist
             playlist = pafy.get_playlist(url)
             self.infoLabel.set_text(playlist['title'])
-            self.playlistThread = threading.Thread(target=self._playPlaylist, args=[playlist])
-            self.playlistThread.start()
+            self._playPlaylist(playlist)
 
 
     def next(self, widget) :
         try :
-            self.vlcShell.stdin.write(bytes('stop\n', 'utf-8'))
+            self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
             self.vlcShell.stdin.flush()
+            self.vidNo += 1
+            try :
+                self.infoLabel.set_text(self.playlistNames[self.vidNo])
+            except :
+                return
 
         except AttributeError :
             self.infoLabel.set_text("Play something first.")
@@ -196,6 +197,11 @@ class YouTubePlayer(Gtk.Window) :
         try :
             self.vlcShell.stdin.write(bytes('prev\n', 'utf-8'))
             self.vlcShell.stdin.flush()
+            self.vidNo -= 1
+            try :
+                self.infoLabel.set_text(self.playlistNames[self.vidNo])
+            except :
+                return
 
         except AttributeError :
             self.infoLabel.set_text("Play something first.")
@@ -263,35 +269,35 @@ class YouTubePlayer(Gtk.Window) :
             search_results+=html_content[i]
             i=i+1
 
-        self.infoLabel.set_text(search_results)
+    #    self.infoLabel.set_text(search_results)
         return search_results
 
     def _playPlaylist(self, playlist) :
-        for i in playlist['items']:
-            try:    # playlists often have links to those videos which do not exist
-                self.infoLabel.set_text(i['pafy'].title)
-                if self.AUDIO_ONLY == True :
-                    video_url = i['pafy'].getbestaudio().url
-                    self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
-                else :
-                    video_url = i['pafy'].getbest().url
-                    self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
-            except:
-                continue
-            while True :
-                sleep(1)
-                self.vlcShell.stdin.write(bytes('status\n', 'utf-8'))
-                self.vlcShell.stdin.flush()
-                x = ''
-                for x in iter(self.vlcShell.stdout.readline, b''):
-                    x = str(x, 'utf-8')
-                    if 'state' in x :
-                        break
-                x = x.split(' ')
-                if x[2] == 'stopped' :
-                    break
 
-        return
+        self.playlistNames = []
+
+        firstVideo = playlist['items'][0]['pafy']
+        self._openVLCShell(firstVideo)
+
+        self.playlistNames += [firstVideo.title]
+
+        self.playlistThread = threading.Thread(target=self._addPlaylistItemsToVLCShell, args=[playlist])
+        self.playlistThread.start()
+
+    def _addPlaylistItemsToVLCShell(self, playlist) :
+        for i in range(1, len(playlist['items'])) :
+            print('adding '+playlist['items'][i]['pafy'].title)
+            self.playlistNames += [playlist['items'][i]['pafy'].title]
+            if self.AUDIO_ONLY :
+                try :
+                    self.vlcShell.stdin.write(bytes('enqueue '+playlist['items'][i]['pafy'].getbestaudio().url+'\n', 'utf-8'))
+                except OSError :
+                    continue
+            else :
+                try :
+                    self.vlcShell.stdin.write(bytes('enqueue '+playlist['items'][i]['pafy'].getbest().url+'\n', 'utf-8'))
+                except OSError :
+                    continue
 
     def _showHelp(self, widget) :
         window = helpwindow.helpWindow()
@@ -302,7 +308,7 @@ class YouTubePlayer(Gtk.Window) :
 
     def _quitVLC(self, widget) :
         try :
-            self.vlcShell.stdin.write('q\n')
+            self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
             self.vlcShell.stdin.flush()
 
         except AttributeError :
@@ -311,3 +317,18 @@ class YouTubePlayer(Gtk.Window) :
             img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
             self.playButton.set_image(img)
             self.vlcShell = None
+
+    def _openVLCShell(self, video) :
+        self.infoLabel.set_text(video.title)
+        if self.AUDIO_ONLY == True :
+            try :
+                video_url = video.getbestaudio().url
+            except OSError:
+                self.infoLabel.set_text("Can't play the requested video")
+            self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+        else :
+            try :
+                video_url = video.getbest().url
+            except OSError:
+                self.infoLabel.set_text("Can't play the requested video")
+            self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
