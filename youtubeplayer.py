@@ -9,7 +9,7 @@ from time import sleep
 import helpwindow
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk, Gio, GLib
 
 oldURL = None
 
@@ -19,7 +19,6 @@ class YouTubePlayer(Gtk.Window) :
         self.AUDIO_ONLY = False
         self.MINIMAL_INTERFACE = True
         self.vlcShell = None
-        self.downloadThread = None
         self.playlistThread = None
         self.playlistNames = []
         self.vidNo = 0
@@ -140,11 +139,12 @@ class YouTubePlayer(Gtk.Window) :
 
     #    seekBox.pack_start(self.seekBar, True, True, 0)
         headerBar.pack_end(self.totalTime)
-
+        '''
         self.seekThread = threading.Thread(target=self._setSeekBar)
         self.seekThread.setDaemon(True)
         self.seekThread.start()
-
+        '''
+        GLib.timeout_add_seconds(1, self._setSeekBar)
 
 
         #############################################################
@@ -186,28 +186,39 @@ class YouTubePlayer(Gtk.Window) :
 
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
         self.playButton.set_image(img)
+        self.entry.set_text('')
+        self.clickCounter = 1
 
-        self.openVLC(url)
+        t = threading.Thread(target=self.openVLC, args=[url])
+        t.setDaemon(True)
+        t.start()
+    #    self.openVLC(url)
         return
 
     def openVLC(self,url) :
 
+        #Play button
+#        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
+#        self.playButton = Gtk.Button(image=img, name='play-button')
+        # Check if input is a url or search query
         if url[0] == '/' : # search term
             if url[1] == '/' :
                 # Search for playlist
                 self.infoLabel.set_text("Searching for playlist")
                 url = self._getFirstYTResultURL_PL(url[2:])
+                if url == -1 : # Error loading url
+                    return
             else :
                 #Search for video
                 self.infoLabel.set_text("Searching for video")
                 url = self._getFirstYTResultURL(url[1:])
+                if url == -1 : # Error loading url
+                    return
 
         if 'list=' not in url: #not a playlist
             vid = pafy.new(url)
-
-
-
             self._openVLCShell(vid)
+
         else: # A playlist
             playlist = pafy.get_playlist(url)
             self.infoLabel.set_text(playlist['title'])
@@ -246,7 +257,11 @@ class YouTubePlayer(Gtk.Window) :
     def download(self, widget) :
         #must use threading
         url = self.entry.get_text()
+        thread = threading.Thread(target=self._download, args=[url])
+        thread.start()
 
+
+    def _download(self, url) :
         if url == '' :
             self.infoLabel.set_text("I can't download nothing. XD")
             return
@@ -256,10 +271,14 @@ class YouTubePlayer(Gtk.Window) :
                 # Search for playlist
                 self.infoLabel.set_text("Searching for playlist")
                 url = self._getFirstYTResultURL_PL(url[2:])
+                if url == -1 : #Error finding url
+                    return
             else :
                 #Search for video
                 self.infoLabel.set_text("Searching for video")
                 url = self._getFirstYTResultURL(url[1:])
+                if url == -1 : #Error finding url
+                    return
 
 
         if 'list=' not in url:
@@ -267,14 +286,10 @@ class YouTubePlayer(Gtk.Window) :
 
 
             if self.AUDIO_ONLY == True :
-                self.downloadThread = threading.Thread(target=self._downloadAudio, args=[video])
-                self.downloadThread.setDaemon(True)
-                self.downloadThread.start()
+                self._downloadAudio(video)
 
             else:
-                self.downloadThread = threading.Thread(target=self._download, args=[video])
-                self.downloadThread.setDaemon(True)
-                self.downloadThread.start()
+                self._downloadVideo(video)
             return
 
         else:
@@ -293,7 +308,7 @@ class YouTubePlayer(Gtk.Window) :
             os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
             video.getbestaudio(preftype="m4a").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
 
-    def _download(self, video) :
+    def _downloadVideo(self, video) :
         try :
             video.getbest(preftype="mp4").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'.'+video.getbest().extension, quiet=False, callback=self._setdownloadETA)
         except FileNotFoundError :
@@ -310,7 +325,12 @@ class YouTubePlayer(Gtk.Window) :
 
     def _getFirstYTResultURL(self, query)  :
         query_string = urllib.parse.urlencode({"search_query" : query})
-        response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
+        try :
+            response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
+
+        except urllib.error.URLError :
+            self.infoLabel.set_text("Check your internet connection.")
+            return -1
         html_content=response.read().decode(response.headers.get_content_charset())
         i = str(html_content).index("watch?")
         search_results = html_content[i+8: i+19]
@@ -318,7 +338,11 @@ class YouTubePlayer(Gtk.Window) :
 
     def _getFirstYTResultURL_PL(self, query) :
         query_string = urllib.parse.urlencode({"search_query" :  'playlist ' + query})
-        response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string + "&sp=EgIQAw%253D%253D")
+        try :
+            response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string + "&sp=EgIQAw%253D%253D")
+        except urllib.error.URLError :
+            self.infoLabel.set_text("Check your internet connection.")
+            return -1
         html_content=response.read().decode(response.headers.get_content_charset())
         i = str(html_content).index("list=") + 5
         search_results='https://www.youtube.com/playlist?list='
@@ -326,7 +350,6 @@ class YouTubePlayer(Gtk.Window) :
             search_results+=html_content[i]
             i=i+1
 
-    #    self.infoLabel.set_text(search_results)
         return search_results
 
     def _playPlaylist(self, playlist) :
@@ -405,40 +428,41 @@ class YouTubePlayer(Gtk.Window) :
         self.MINIMAL_INTERFACE = widget.get_active()
 
     def _setSeekBar(self) :
-        while True :
-            sleep(1)
+#        while True :
 
+        try :
+            self.vlcShell.stdout.flush()
+            self.vlcShell.stdin.write(bytes('get_length\n', 'utf-8'))
+            self.vlcShell.stdin.flush()
+            c=0
+            totalTime=0
+            x = self.vlcShell.stdout.readline()
             try :
-                self.vlcShell.stdout.flush()
-                self.vlcShell.stdin.write(bytes('get_length\n', 'utf-8'))
-                self.vlcShell.stdin.flush()
-                c=0
-                totalTime=0
-                x = self.vlcShell.stdout.readline()
-                try :
-                    totalTime = int(str(x, 'utf-8')[2:-2])
-                except ValueError :
-                    continue
-                if totalTime == 0 :
-                    totalTime = 1
-                self.totalTime.set_text(self._secondsToTime(totalTime))
+                totalTime = int(str(x, 'utf-8')[2:-2])
+            except ValueError :
+                return True
+            if totalTime == 0 :
+                totalTime = 1
+            self.totalTime.set_text(self._secondsToTime(totalTime))
 
-                self.vlcShell.stdin.write(bytes('get_time\n', 'utf-8'))
-                self.vlcShell.stdin.flush()
-                x = self.vlcShell.stdout.readline()
-                try :
-                    currentTime = int(str(x, 'utf-8')[2:-2])
-                except ValueError :
-                    continue
-                self.currentTime.set_text(self._secondsToTime(currentTime))
+            self.vlcShell.stdin.write(bytes('get_time\n', 'utf-8'))
+            self.vlcShell.stdin.flush()
+            x = self.vlcShell.stdout.readline()
+            try :
+                currentTime = int(str(x, 'utf-8')[2:-2])
+            except ValueError :
+                return True
+            self.currentTime.set_text(self._secondsToTime(currentTime))
 
-                self.seekBar.set_value(int((float(currentTime)/totalTime)*100))
+            self.seekBar.set_value(int((float(currentTime)/totalTime)*100))
 
-            except BrokenPipeError :
-                continue
+        except BrokenPipeError :
+            return True
 
-            except AttributeError :
-                continue
+        except AttributeError :
+            return True
+
+        return True
 
     def _secondsToTime(self, seconds) :
         t = ''
