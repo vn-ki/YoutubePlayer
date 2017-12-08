@@ -5,6 +5,13 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
 </p>
 
+## Features
+- Minimial UI.
+- Search, play and download audio or video.
+- Since the app uses vlc control through mpris is enabled by defualt.
+- Music controls integrated into title bar.
+- Ability to use vlc's minimal interface while playing video.
+
 ## Dependencies
 - [Python 3](https://www.python.org/download/releases/3.0/)
 - [Pafy](https://pypi.python.org/pypi/pafy)
@@ -35,14 +42,14 @@ $ ./main.py
 - Press the stop button to stop the running instance of vlc. Ideally this should be done before playing a new video, but is not necessary.
 - The help page includes the above information.
 
-## Known Issues
+### Known Issues
 
-- The UI is unresponsive while loading a video. (This bug is low priority and propably will never be fixed)
 - The seek bar functions awkwardly at times.
 
-## Upcoming features
+### Upcoming features
 
 - Improved search.
 - More download options.
 - Support for more players. (mpv)
 - Better support for windows (Chances are thin).
+- Own mpris/dbus interface.
