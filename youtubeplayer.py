@@ -9,7 +9,7 @@ from time import sleep
 import helpwindow
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gio, GLib
+from gi.repository import Gtk, Gio, GLib, GObject
 
 oldURL = None
 
@@ -132,7 +132,7 @@ class YouTubePlayer(Gtk.Window) :
         self.seekBar.set_draw_value(False)
         self.seekBar.set_property("width-request", 150)
         self.seekBar.set_digits(1)
-        self.seekBar.set_value(100)
+        self.seekBar.set_value(0)
 
         headerBar.pack_start(self.buttonBox)
         headerBar.set_has_subtitle(False)
@@ -142,11 +142,6 @@ class YouTubePlayer(Gtk.Window) :
 
     #    seekBox.pack_start(self.seekBar, True, True, 0)
         headerBar.pack_end(self.totalTime)
-        '''
-        self.seekThread = threading.Thread(target=self._setSeekBar)
-        self.seekThread.setDaemon(True)
-        self.seekThread.start()
-        '''
         GLib.timeout_add_seconds(1, self._setSeekBar)
 
 
@@ -234,7 +229,6 @@ class YouTubePlayer(Gtk.Window) :
 
 
     def _playPlaylist(self, playlist) :
-        print(self.vidNo)
         video = playlist['items'][self.vidNo]['pafy']
         self._openVLCShell(video)
 
@@ -332,8 +326,8 @@ class YouTubePlayer(Gtk.Window) :
         return
 
     def _setdownloadETA(self, a, b, percentage, d, ETA) :
-        self.infoLabel.set_text('Completed : '+str(int(percentage*100))+'% ETA : '+str(int(ETA))+'s')
-        self.entry.set_progress_fraction(percentage)
+        GObject.idle_add(self.infoLabel.set_text,'Completed : '+str(int(percentage*100))+'% ETA : '+str(int(ETA))+'s', priority = GObject.PRIORITY_DEFAULT)
+        GObject.idle_add(self.entry.set_progress_fraction, percentage, priority = GObject.PRIORITY_DEFAULT)
 
     def _downloadAudio(self, video) :
         try :
@@ -428,8 +422,8 @@ class YouTubePlayer(Gtk.Window) :
                 return True
 
             if totalTime == 0 :
-                totalTime = 1
-            self.totalTime.set_text(self._secondsToTime(totalTime))
+                totalTime = 180
+            GObject.idle_add(self.totalTime.set_text, self._secondsToTime(totalTime), priority=GObject.PRIORITY_DEFAULT)
 
             self.vlcShell.stdin.write(bytes('get_time\n', 'utf-8'))
             self.vlcShell.stdin.flush()
@@ -438,7 +432,6 @@ class YouTubePlayer(Gtk.Window) :
                 currentTime = int(str(x, 'utf-8')[2:-2])
             except ValueError :
                 return True
-            print(currentTime, totalTime)
             if currentTime==totalTime-1:
                 if self.vidNo!=self.totalTracks:
                     self.vidNo += 1
@@ -446,8 +439,8 @@ class YouTubePlayer(Gtk.Window) :
                 else:
                     self.infoLabel.set_text('All songs have been played')
 
-            self.currentTime.set_text(self._secondsToTime(currentTime))
-            self.seekBar.set_value(int((float(currentTime)/totalTime)*100))
+            GObject.idle_add(self.currentTime.set_text, self._secondsToTime(currentTime), priority=GObject.PRIORITY_DEFAULT)
+            GObject.idle_add(self.seekBar.set_value, int((float(currentTime)/totalTime)*100), priority=GObject.PRIORITY_DEFAULT)
 
         except BrokenPipeError :
             return True
