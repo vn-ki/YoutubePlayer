@@ -23,6 +23,9 @@ class YouTubePlayer(Gtk.Window) :
         self.playlistNames = []
         self.vidNo = 0
         self.clickCounter = 0
+        self.playList=[]
+        self.totalTracks=0
+
 
 
         Gtk.Window.__init__(self)
@@ -201,6 +204,9 @@ class YouTubePlayer(Gtk.Window) :
 #        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
 #        self.playButton = Gtk.Button(image=img, name='play-button')
         # Check if input is a url or search query
+        if self.vlcShell!=None:
+            self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
+            self.vlcShell.stdin.flush()
         if url[0] == '/' : # search term
             if url[1] == '/' :
                 # Search for playlist
@@ -221,38 +227,66 @@ class YouTubePlayer(Gtk.Window) :
 
         else: # A playlist
             playlist = pafy.get_playlist(url)
+            self.totalTracks=len(playlist['items'])
             self.infoLabel.set_text(playlist['title'])
+            self.playList=playlist;
             self._playPlaylist(playlist)
 
 
-    def next(self, widget) :
-        try :
-            self.vlcShell.stdin.write(bytes('next\n', 'utf-8'))
-            self.vlcShell.stdin.flush()
-            self.vidNo += 1
-            try :
-                self.infoLabel.set_text(self.playlistNames[self.vidNo])
-            except :
-                return
+    def _playPlaylist(self, playlist) :
+        print(self.vidNo)
+        video = playlist['items'][self.vidNo]['pafy']
+        self._openVLCShell(video)
 
-        except AttributeError :
-            self.infoLabel.set_text("Play something first.")
-        return
+    def _openVLCShell(self, video) :
+        self.infoLabel.set_text(video.title)
+
+        if self.AUDIO_ONLY == True :
+            try :
+                video_url = video.getbestaudio().url
+            except OSError:
+                self.infoLabel.set_text("Can't play the requested video")
+            self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc --meta-title '.split()+['"'+video.title+'"']+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+
+        else :
+            try :
+                video_url = video.getbest().url
+            except OSError:
+                self.infoLabel.set_text("Can't play the requested video")
+            if self.MINIMAL_INTERFACE :
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc --meta-title'.split()+['"'+video.title+'"']+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+            else :
+                self.vlcShell = subprocess.Popen('vlc --no-video-title --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
+
+
+        self.currentTime.show()
+        self.seekBar.show()
+        self.totalTime.show()
+    def next(self, widget) :
+
+        if self.vidNo!=self.totalTracks:
+            try:
+                if self.vlcShell!=None:
+                    self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
+                    self.vlcShell.stdin.flush()
+            except:
+                pass
+            self.vidNo += 1
+            self._playPlaylist(self.playList)
+        else:
+            self.infoLabel.set_text('All songs have been played')
 
     def previous(self, widget):
-        try :
-            self.vlcShell.stdin.write(bytes('prev\n', 'utf-8'))
-            self.vlcShell.stdin.flush()
+
+        if self.vidNo !=0:
+            try:
+                if self.vlcShell!=None:
+                    self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
+                    self.vlcShell.stdin.flush()
+            except:
+                pass
             self.vidNo -= 1
-            try :
-                self.infoLabel.set_text(self.playlistNames[self.vidNo])
-
-            except :
-                return
-
-        except AttributeError :
-            self.infoLabel.set_text("Play something first.")
-        return
+            self._playPlaylist(self.playList)
 
     def download(self, widget) :
         #must use threading
@@ -298,7 +332,7 @@ class YouTubePlayer(Gtk.Window) :
         return
 
     def _setdownloadETA(self, a, b, percentage, d, ETA) :
-        self.infoLabel.set_text('Completed : '+str(int(percentage*100))+' ETA : '+str(int(ETA))+'s')
+        self.infoLabel.set_text('Completed : '+str(int(percentage*100))+'% ETA : '+str(int(ETA))+'s')
         self.entry.set_progress_fraction(percentage)
 
     def _downloadAudio(self, video) :
@@ -352,33 +386,7 @@ class YouTubePlayer(Gtk.Window) :
 
         return search_results
 
-    def _playPlaylist(self, playlist) :
 
-        self.playlistNames = []
-
-        firstVideo = playlist['items'][0]['pafy']
-        self._openVLCShell(firstVideo)
-
-        self.playlistNames += [firstVideo.title]
-
-        self.playlistThread = threading.Thread(target=self._addPlaylistItemsToVLCShell, args=[playlist])
-        self.playlistThread.setDaemon(True)
-        self.playlistThread.start()
-
-    def _addPlaylistItemsToVLCShell(self, playlist) :
-        for i in range(1, len(playlist['items'])) :
-            print('adding '+playlist['items'][i]['pafy'].title)
-            self.playlistNames += [playlist['items'][i]['pafy'].title]
-            if self.AUDIO_ONLY :
-                try :
-                    self.vlcShell.stdin.write(bytes('enqueue '+playlist['items'][i]['pafy'].getbestaudio().url+'\n', 'utf-8'))
-                except OSError :
-                    continue
-            else :
-                try :
-                    self.vlcShell.stdin.write(bytes('enqueue '+playlist['items'][i]['pafy'].getbest().url+'\n', 'utf-8'))
-                except OSError :
-                    continue
 
     def _showHelp(self, widget) :
         window = helpwindow.helpWindow()
@@ -399,31 +407,6 @@ class YouTubePlayer(Gtk.Window) :
             self.playButton.set_image(img)
             self.vlcShell = None
 
-    def _openVLCShell(self, video) :
-        self.infoLabel.set_text(video.title)
-
-        if self.AUDIO_ONLY == True :
-            try :
-                video_url = video.getbestaudio().url
-            except OSError:
-                self.infoLabel.set_text("Can't play the requested video")
-            self.vlcShell = subprocess.Popen('cvlc --no-video --network-caching 10000 --extraintf rc --meta-title '.split()+['"'+video.title+'"']+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
-
-        else :
-            try :
-                video_url = video.getbest().url
-            except OSError:
-                self.infoLabel.set_text("Can't play the requested video")
-            if self.MINIMAL_INTERFACE :
-                self.vlcShell = subprocess.Popen('vlc --no-video-title --qt-minimal-view --extraintf rc --meta-title'.split()+['"'+video.title+'"']+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
-            else :
-                self.vlcShell = subprocess.Popen('vlc --no-video-title --extraintf rc'.split()+[video_url], stdin = subprocess.PIPE, stdout= subprocess.PIPE)
-
-
-        self.currentTime.show()
-        self.seekBar.show()
-        self.totalTime.show()
-
     def _mininalInterface(self, widget) :
         self.MINIMAL_INTERFACE = widget.get_active()
 
@@ -434,13 +417,16 @@ class YouTubePlayer(Gtk.Window) :
             self.vlcShell.stdout.flush()
             self.vlcShell.stdin.write(bytes('get_length\n', 'utf-8'))
             self.vlcShell.stdin.flush()
-            c=0
-            totalTime=0
+
+            c = 0
+            totalTime = 0
             x = self.vlcShell.stdout.readline()
+
             try :
                 totalTime = int(str(x, 'utf-8')[2:-2])
             except ValueError :
                 return True
+
             if totalTime == 0 :
                 totalTime = 1
             self.totalTime.set_text(self._secondsToTime(totalTime))
@@ -452,8 +438,15 @@ class YouTubePlayer(Gtk.Window) :
                 currentTime = int(str(x, 'utf-8')[2:-2])
             except ValueError :
                 return True
-            self.currentTime.set_text(self._secondsToTime(currentTime))
+            print(currentTime, totalTime)
+            if currentTime==totalTime-1:
+                if self.vidNo!=self.totalTracks:
+                    self.vidNo += 1
+                    self._playPlaylist(self.playList)
+                else:
+                    self.infoLabel.set_text('All songs have been played')
 
+            self.currentTime.set_text(self._secondsToTime(currentTime))
             self.seekBar.set_value(int((float(currentTime)/totalTime)*100))
 
         except BrokenPipeError :
