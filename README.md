@@ -8,7 +8,7 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 ## Features
 - Minimial UI.
 - Search, play and download audio or video.
-- Since the app uses vlc control through mpris is enabled by defualt.
+- Control thrugh mpris2.
 - Music controls integrated into title bar.
 - Ability to use vlc's minimal interface while playing video.
 
@@ -17,13 +17,14 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 - [Pafy](https://pypi.python.org/pypi/pafy)
 - [youtube-dl](https://github.com/rg3/youtube-dl)
 - [pyGObject](https://pygobject.readthedocs.io/en/latest/)
+- [pydbus](https://github.com/LEW21/pydbus)
 
 ## Installation
 Install the dependencies.
 ```bash
 $ sudo apt install python3 python-pip    # For ubuntu
 $ sudo pacman -S python3 python-pip      # For Arch derivatives
-$ sudo -H pip install --upgrade pygobject pafy youtube-dl
+$ sudo -H pip install --upgrade pygobject pafy youtube-dl pydbus
 ```
 After installing the dependencies, clone the repository and run main.py.
 ```bash

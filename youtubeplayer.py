@@ -8,6 +8,8 @@ from time import sleep
 
 import helpwindow
 
+from pydbus.generic import signal
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gio, GLib, GObject
 
@@ -20,11 +22,16 @@ class YouTubePlayer(Gtk.Window) :
         self.MINIMAL_INTERFACE = True
         self.vlcShell = None
         self.playlistThread = None
-        self.playlistNames = []
         self.vidNo = 0
         self.clickCounter = 0
         self.playList=[]
         self.totalTracks=0
+
+        ##
+        #Metadata
+
+        self.title = None
+        ##
 
 
 
@@ -201,7 +208,10 @@ class YouTubePlayer(Gtk.Window) :
         # Check if input is a url or search query
         if self.vlcShell!=None:
             self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
-            self.vlcShell.stdin.flush()
+            try :
+                self.vlcShell.stdin.flush()
+            except BrokenPipeError:
+                self.vlcShell = None
         if url[0] == '/' : # search term
             if url[1] == '/' :
                 # Search for playlist
@@ -221,19 +231,24 @@ class YouTubePlayer(Gtk.Window) :
             self._openVLCShell(vid)
 
         else: # A playlist
-            playlist = pafy.get_playlist(url)
+            try :
+                playlist = pafy.get_playlist(url)
+            except ValueError :
+                self.infoLabel.set_text("Error getting playlist. Try again")
+                return
             self.totalTracks=len(playlist['items'])
             self.infoLabel.set_text(playlist['title'])
             self.playList=playlist;
-            self._playPlaylist(playlist)
+            self._playPlaylist()
 
 
-    def _playPlaylist(self, playlist) :
-        video = playlist['items'][self.vidNo]['pafy']
+    def _playPlaylist(self) :
+        video = self.playList['items'][self.vidNo]['pafy']
         self._openVLCShell(video)
 
     def _openVLCShell(self, video) :
         self.infoLabel.set_text(video.title)
+        self.title = video.title
 
         if self.AUDIO_ONLY == True :
             try :
@@ -266,7 +281,7 @@ class YouTubePlayer(Gtk.Window) :
             except:
                 pass
             self.vidNo += 1
-            self._playPlaylist(self.playList)
+            self._playPlaylist()
         else:
             self.infoLabel.set_text('All songs have been played')
 
@@ -280,12 +295,13 @@ class YouTubePlayer(Gtk.Window) :
             except:
                 pass
             self.vidNo -= 1
-            self._playPlaylist(self.playList)
+            self._playPlaylist()
 
     def download(self, widget) :
         #must use threading
         url = self.entry.get_text()
         thread = threading.Thread(target=self._download, args=[url])
+        thread.setDaemon(True)
         thread.start()
 
 
@@ -405,7 +421,6 @@ class YouTubePlayer(Gtk.Window) :
         self.MINIMAL_INTERFACE = widget.get_active()
 
     def _setSeekBar(self) :
-#        while True :
 
         try :
             self.vlcShell.stdout.flush()
@@ -422,7 +437,7 @@ class YouTubePlayer(Gtk.Window) :
                 return True
 
             if totalTime == 0 :
-                totalTime = 180
+                totalTime = 600
             GObject.idle_add(self.totalTime.set_text, self._secondsToTime(totalTime), priority=GObject.PRIORITY_DEFAULT)
 
             self.vlcShell.stdin.write(bytes('get_time\n', 'utf-8'))
@@ -435,7 +450,9 @@ class YouTubePlayer(Gtk.Window) :
             if currentTime==totalTime-1:
                 if self.vidNo!=self.totalTracks:
                     self.vidNo += 1
-                    self._playPlaylist(self.playList)
+                    self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
+                    self.vlcShell.stdin.flush()
+                    self._playPlaylist()
                 else:
                     self.infoLabel.set_text('All songs have been played')
 
