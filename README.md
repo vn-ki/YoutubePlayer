@@ -3,7 +3,9 @@ Search and play videos from YouTube directly using vlc with the ability to strea
 
 <p align="center">
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
+  <img src="/images/screenshots/screenshot2.png?raw=true" alt="YouTube Player"/>
 </p>
+
 
 ## Features
 - Minimial UI.
