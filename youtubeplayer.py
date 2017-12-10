@@ -1,6 +1,7 @@
 import gi
 import subprocess
-import pafy
+import pafy, json, re
+from mutagen import mp4
 import urllib
 import threading
 import os
@@ -58,6 +59,7 @@ class YouTubePlayer(Gtk.Window) :
         #Label
 
         self.infoLabel = Gtk.Label("YouTubePlayer")
+        self.infoLabel.set_line_wrap(True)
         mainBox.pack_start(self.infoLabel, True, True, 0)
         #
 
@@ -263,14 +265,28 @@ class YouTubePlayer(Gtk.Window) :
         self._openVLCShell(video)
 
     def _openVLCShell(self, video) :
-        self.infoLabel.set_text(video.title)
-        self.title = video.title
+
+        metadata = self._getMetadata(video)
         self.mpris.PlaybackStatus = "Playing"
-        self.mpris.Metadata = {
-            'xesam:title' :GLib.Variant('s', self.title),
-            'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
-            'mpris:length' : GLib.Variant('x', video.length*1000000)
-        }
+        if metadata == None :
+            self.infoLabel.set_text(video.title)
+            self.mpris.Metadata = {
+                'xesam:title' :GLib.Variant('s', video.title),
+                'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
+                'mpris:length' : GLib.Variant('x', video.length*1000000)
+            }
+
+        else :
+            self.infoLabel.set_text(metadata['track_title']+ ' - ' + metadata['artist'])
+            self.mpris.Metadata = {
+                'xesam:title' :GLib.Variant('s', metadata['track_title']),
+                'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
+                'mpris:length' : GLib.Variant('x', video.length*1000000),
+                'mpris:artUrl' : GLib.Variant('s', metadata['album_art_url']),
+                'xesam:album' : GLib.Variant('s', metadata['album']),
+                'xesam:artist' : GLib.Variant('as', [metadata['artist']])
+            }
+
 
         if self.AUDIO_ONLY == True :
             try :
@@ -369,11 +385,33 @@ class YouTubePlayer(Gtk.Window) :
         GObject.idle_add(self.entry.set_progress_fraction, percentage, priority = GObject.PRIORITY_DEFAULT)
 
     def _downloadAudio(self, video) :
+        filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].m4a'
+        audio = video.m4astreams[-1]
         try :
-            video.getbestaudio(preftype="m4a").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+            audio.download(filepath, quiet=False, callback=self._setdownloadETA)
         except FileNotFoundError :
             os.makedirs(os.environ.get('HOME')+'/Downloads/YouTubePlayer')
-            video.getbestaudio(preftype="m4a").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'[audio].'+video.getbestaudio().extension, quiet=False, callback=self._setdownloadETA)
+            audio.getbestaudio(preftype="m4a").download(filepath, quiet=False, callback=self._setdownloadETA)
+
+        metadata = self._getMetadata(video)
+        if metadata == None :
+            return
+
+        self.infoLabel.set_text('Fixing metadata')
+        audiofile = mp4.MP4(filepath)
+
+        audiofile['\xa9nam'] = metadata['track_title']
+        audiofile['\xa9ART'] = metadata['artist']
+        audiofile['\xa9alb'] = metadata['album']
+        audiofile['aART'] = metadata['artist']
+
+        cover = metadata['album_art_url']
+        fd = urllib.request.urlopen(cover)
+        covr = mp4.MP4Cover(fd.read(), getattr(mp4.MP4Cover,'FORMAT_PNG' if cover.endswith('png') else 'FORMAT_JPEG'))
+        fd.close()
+        audiofile['covr'] = [covr]
+        audiofile.save()
+        self.infoLabel.set_text('Metadata fixed')
 
     def _downloadVideo(self, video) :
         try :
@@ -500,3 +538,53 @@ class YouTubePlayer(Gtk.Window) :
         else :
             t += str(seconds%60)
         return t
+
+    def _getMetadata(self, video) :
+        t = video.title.split('-')
+
+        if len(t) != 2 : #If len is not 2, no way of properly knowing title for sure
+            t = t[0]
+            t.split(':')
+            if len(t) != 2 :
+                return None
+
+        t[0] = re.sub("[\(\[].*?[\)\]]", "", t[0])
+        t[1] = re.sub("[\(\[].*?[\)\]]", "", t[1])
+
+        t[0] = t[0].strip()
+        t[1] = t[1].strip()
+
+        t[0] = t[0].replace(' ', '+')
+        t[1] = t[1].replace(' ', '+')
+
+        metadata = self._getMetadataFromLastfm(t[0], t[1])
+
+        if metadata != None :
+            return metadata
+
+        metadata = self._getMetadataFromLastfm(t[1], t[0])
+        return metadata
+
+    def _getMetadataFromLastfm(self, artist, track) :
+
+        url = 'http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=12dec50313f885d407cf8132697b8712&artist='
+        url += artist+'&track='
+        url += track + '&format=json'
+
+        resp = urllib.request.urlopen(url)
+
+        metadata = dict()
+
+        data = json.loads(resp.read())
+
+        if 'track' != list(data.keys())[0] :
+            return None
+        try :
+            metadata['track_title'] = data['track']['name']
+            metadata['artist'] = data['track']['artist']['name']
+            metadata['album'] = data['track']['album']['title']
+            metadata['album_art_url'] = data['track']['album']['image'][-1]['#text']
+        except :
+            return None
+
+        return metadata

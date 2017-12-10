@@ -1,5 +1,5 @@
 # YoutubePlayer
-Play videos from YouTube directly using vlc with the ability to stream audio only. Built on Gtk 3.
+Search and play videos from YouTube directly using vlc with the ability to stream audio only. Built on Gtk 3. Download video or audio from youtube directly. Song metadata including album art is automatically fixed when you stream or download a song.
 
 <p align="center">
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
@@ -8,6 +8,7 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 ## Features
 - Minimial UI.
 - Search, play and download audio or video.
+- Auto correction of metadata (from last.fm) whenever possible.
 - Control through mpris2.
 - Music controls integrated into title bar.
 - Ability to use vlc's minimal interface while playing video.
@@ -18,13 +19,14 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 - [youtube-dl](https://github.com/rg3/youtube-dl)
 - [pyGObject](https://pygobject.readthedocs.io/en/latest/)
 - [pydbus](https://github.com/LEW21/pydbus)
+- [mutagen](http://mutagen.readthedocs.io/en/latest/index.html)
 
 ## Installation
 Install the dependencies.
 ```bash
 $ sudo apt install python3 python-pip    # For ubuntu
 $ sudo pacman -S python3 python-pip      # For Arch derivatives
-$ sudo -H pip install --upgrade pygobject pafy youtube-dl pydbus
+$ sudo -H pip install --upgrade pygobject pafy youtube-dl pydbus mutagen
 ```
 After installing the dependencies, clone the repository and run main.py.
 ```bash
