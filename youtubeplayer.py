@@ -540,20 +540,23 @@ class YouTubePlayer(Gtk.Window) :
         return t
 
     def _getMetadata(self, video) :
-        t = re.sub("[\(\[].*?[\)\]]", "", video.title)
+        t = re.sub("[\(\[].*?[\)\]]", "", video.title.lower())
         t = t.split('-')
 
         if len(t) != 2 : #If len is not 2, no way of properly knowing title for sure
             t = t[0]
             t = t.split(':')
-            if len(t) != 2 :
-                return None
+            if len(t) != 2 :  #Ugly, but to be safe in case all these chars exist, Will improve
+                t = t[0]
+                t = t.split('|')
+                if len(t) != 2 :
+                    return None
+
+        t[0] = re.sub("(ft |ft.|feat |feat.).*.", "", t[0])
+        t[1] = re.sub("(ft |ft.|feat |feat.).*.", "", t[1])
 
         t[0] = t[0].strip()
         t[1] = t[1].strip()
-
-        t[0] = t[0].replace(' ', '+')
-        t[1] = t[1].replace(' ', '+')
 
         metadata = self._getMetadataFromLastfm(t[0], t[1])
 
@@ -565,9 +568,10 @@ class YouTubePlayer(Gtk.Window) :
 
     def _getMetadataFromLastfm(self, artist, track) :
 
-        url = 'http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=12dec50313f885d407cf8132697b8712&artist='
-        url += artist+'&track='
-        url += track + '&format=json'
+        url = 'http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=12dec50313f885d407cf8132697b8712&'
+        url += urllib.parse.urlencode({"artist" :  artist}) + '&'
+        url += urllib.parse.urlencode({"track" :  track}) + '&'
+        url += '&format=json'
 
         resp = urllib.request.urlopen(url)
 

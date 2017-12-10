@@ -57,4 +57,3 @@ $ ./main.py
 - More download options.
 - Support for more players. (mpv)
 - Better support for windows (Chances are thin).
-- Own mpris/dbus interface.
