@@ -6,9 +6,12 @@ import threading
 import os
 from time import sleep
 
+##
 import helpwindow
-
-from pydbus.generic import signal
+from mpris import *
+from pydbus import SessionBus
+import pkg_resources
+##
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gio, GLib, GObject
@@ -151,6 +154,20 @@ class YouTubePlayer(Gtk.Window) :
         headerBar.pack_end(self.totalTime)
         GLib.timeout_add_seconds(1, self._setSeekBar)
 
+        ##
+        self.mpris = MPRIS()
+        MPRIS.dbus = pkg_resources.resource_string(__name__, "mpris/mpris.xml").decode("utf-8")
+        self.mpris.pl = self
+        bus = SessionBus()
+        bus.publish('org.mpris.MediaPlayer2.YouTubePlayer', self.mpris, ("/org/mpris/MediaPlayer2", self.mpris) )
+        loop = GLib.MainLoop()
+        '''
+        mprisThread = threading.Thread(target=loop.run)
+        mprisThread.setDaemon(True)
+        mprisThread.start()
+        '''
+        ##
+
 
         #############################################################
 
@@ -169,15 +186,18 @@ class YouTubePlayer(Gtk.Window) :
             if url != '' :
                 oldURL = url
 
+
             if self.clickCounter%2 == 0 :
                 img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
                 self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
                 self.playButton.set_image(img)
+                self.mpris.PlaybackStatus = "Paused"
 
             else :
                 img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
                 self.vlcShell.stdin.write(bytes('pause\n', 'utf-8'))
                 self.playButton.set_image(img)
+                self.mpris.PlaybackStatus = "Playing"
 
             try :
                 self.vlcShell.stdin.flush()
@@ -197,14 +217,10 @@ class YouTubePlayer(Gtk.Window) :
         t = threading.Thread(target=self.openVLC, args=[url])
         t.setDaemon(True)
         t.start()
-    #    self.openVLC(url)
         return
 
     def openVLC(self,url) :
 
-        #Play button
-#        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
-#        self.playButton = Gtk.Button(image=img, name='play-button')
         # Check if input is a url or search query
         if self.vlcShell!=None:
             self.vlcShell.stdin.write(bytes('q\n', 'utf-8'))
@@ -249,6 +265,12 @@ class YouTubePlayer(Gtk.Window) :
     def _openVLCShell(self, video) :
         self.infoLabel.set_text(video.title)
         self.title = video.title
+        self.mpris.PlaybackStatus = "Playing"
+        self.mpris.Metadata = {
+            'xesam:title' :GLib.Variant('s', self.title),
+            'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
+            'mpris:length' : GLib.Variant('x', video.length*1000000)
+        }
 
         if self.AUDIO_ONLY == True :
             try :
@@ -282,6 +304,7 @@ class YouTubePlayer(Gtk.Window) :
                 pass
             self.vidNo += 1
             self._playPlaylist()
+
         else:
             self.infoLabel.set_text('All songs have been played')
 

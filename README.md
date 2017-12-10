@@ -8,7 +8,7 @@ Play videos from YouTube directly using vlc with the ability to stream audio onl
 ## Features
 - Minimial UI.
 - Search, play and download audio or video.
-- Control thrugh mpris2.
+- Control through mpris2.
 - Music controls integrated into title bar.
 - Ability to use vlc's minimal interface while playing video.
 

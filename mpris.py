@@ -2,6 +2,8 @@ from pydbus import SessionBus
 from pydbus.generic import signal
 from gi.repository import GLib
 
+#TODO : Implement the seeked signal and seek through mpris
+
 class MPRIS(object) :
     def Raise(self) :
         print("Raise")
@@ -12,8 +14,6 @@ class MPRIS(object) :
 
     def Next(self) :
         self.pl.next(None)
-        self._Metadata['xesam:title'] = GLib.Variant('s', self.pl.title)
-        self._Metadata['mpris:trackid'] = GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.pl.vidNo))
 
     def Previous(self) :
         self.pl.prev(None)
@@ -23,12 +23,6 @@ class MPRIS(object) :
 
     def PlayPause(self) :
         self.pl.play(None)
-        if self._PlaybackStatus == "Playing" :
-            print('pause')
-            self._PlaybackStatus = "Paused"
-        else :
-            print('pla')
-            self._PlaybackStatus = "Playing"
 
     def Stop(self) :
         print("stop")
@@ -40,7 +34,7 @@ class MPRIS(object) :
     def Seek(self, o) :
         print(o)
 
-    def SetPosition(self, x) :
+    def SetPosition(self,o, x) :
         print(x)
 
     def OpenUri(self, s) :
@@ -54,7 +48,7 @@ class MPRIS(object) :
         self._SupportedUriSchemes = ('file', 'http')
         self._SupportedMimeTypes = ('audio/mpeg')
 
-        self._PlaybackStatus = "Playing"
+        self._PlaybackStatus = "Stopped"
         self._Rate = 1.0
         self._Metadata =  { 'mpris:trackid' :  GLib.Variant('o','/org/mpris/MediaPlayer2/YouTubePlayer/1'),'xesam:title': GLib.Variant('s', 'Welcome')}
         self._Volume = 100
@@ -90,7 +84,7 @@ class MPRIS(object) :
 
     @property
     def HasTrackList(self) :
-        return self._CanQuit
+        return self._HasTrackList
 
     @HasTrackList.setter
     def HasTrackList(self, value) :
