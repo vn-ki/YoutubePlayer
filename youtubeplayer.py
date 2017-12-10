@@ -540,16 +540,14 @@ class YouTubePlayer(Gtk.Window) :
         return t
 
     def _getMetadata(self, video) :
-        t = video.title.split('-')
+        t = re.sub("[\(\[].*?[\)\]]", "", video.title)
+        t = t.split('-')
 
         if len(t) != 2 : #If len is not 2, no way of properly knowing title for sure
             t = t[0]
-            t.split(':')
+            t = t.split(':')
             if len(t) != 2 :
                 return None
-
-        t[0] = re.sub("[\(\[].*?[\)\]]", "", t[0])
-        t[1] = re.sub("[\(\[].*?[\)\]]", "", t[1])
 
         t[0] = t[0].strip()
         t[1] = t[1].strip()
