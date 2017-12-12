@@ -9,7 +9,7 @@ from time import sleep
 
 ##
 import helpwindow
-from mpris import *
+from mpris.mpris import *
 from pydbus import SessionBus
 import pkg_resources
 import vlc
@@ -375,6 +375,7 @@ class YouTubePlayer(Gtk.Window) :
 
     def _seek(self, absSeek) :
         self.player.set_time(absSeek)
+        self.mpris.Seeked( absSeek*1000)
 
     def download(self, widget) :
         #must use threading

@@ -32,10 +32,12 @@ class MPRIS(object) :
         print('play')
 
     def Seek(self, o) :
-        print(o)
+        #self.pl._seek(o/1000)
+        pass
 
-    def SetPosition(self,o, x) :
-        print(x)
+    def SetPosition(self, TrackId, Position) :
+        self._Position = Position
+        self.pl._seek(Position//1000)
 
     def OpenUri(self, s) :
         print(s)
@@ -239,3 +241,4 @@ class MPRIS(object) :
         self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanControl": self.CanControl}, [])
 
     PropertiesChanged = signal()
+    Seeked = signal()

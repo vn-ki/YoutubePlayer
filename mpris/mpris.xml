@@ -26,6 +26,9 @@
 
 
   <interface name="org.mpris.MediaPlayer2.Player">
+      <signal name="Seeked">
+				<arg direction="out" type="x" name="Position"/>
+			</signal>
       <method name="Next" >
       </method>
       <method name="Previous">
