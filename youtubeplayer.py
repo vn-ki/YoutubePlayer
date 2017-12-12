@@ -25,9 +25,10 @@ class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
 
         self.AUDIO_ONLY = False
-        self.MINIMAL_INTERFACE = True
+        self.MINIMAL_INTERFACE = False
         self.player = instance.media_player_new()
         self.playlistThread = None
+        self.ALL_SHOWN =True
         self.vidNo = 0
         self.clickCounter = 0
         self.playList=[]
@@ -39,8 +40,8 @@ class YouTubePlayer(Gtk.Window) :
         self.title = None
         ##
         Gtk.Window.__init__(self)
-        self.set_border_width(10)
-        self.set_size_request(100, 100)
+        #self.set_border_width(10)
+        self.set_size_request(520, 100)
 
         #Title bar tweaks
         headerBar = Gtk.HeaderBar()
@@ -52,18 +53,24 @@ class YouTubePlayer(Gtk.Window) :
 
         ####################################################################
         ## Main Box: All widgets are inside this
-        mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
+        superBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.add(superBox)
+        self.mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10)
+        self.mainBox.set_property('margin', 10)
+        self.mainBox.set_size_request(400,100)
+
         ##
 
         ###Video box
         self.videoEventbox = Gtk.EventBox()
-        #self.videoEventbox.set_property("margin", 0)
+        self.videoEventbox.set_property("margin", 0)
         self.video = Gtk.DrawingArea()
-        self.video.set_size_request(500, 300)
+        self.video.set_size_request(500, 250)
         self.video.connect('realize', self._realized)
         self.videoEventbox.add(self.video)
 
-        mainBox.pack_start(self.videoEventbox, True, True, 0)
+        superBox.pack_start(self.videoEventbox, True, True, 0)
+        superBox.pack_start(self.mainBox, True, True, 0)
 
         ###
 
@@ -71,13 +78,13 @@ class YouTubePlayer(Gtk.Window) :
 
         self.infoLabel = Gtk.Label("YouTubePlayer")
         self.infoLabel.set_line_wrap(True)
-        mainBox.pack_start(self.infoLabel, True, True, 0)
+        self.mainBox.pack_start(self.infoLabel, True, True, 0)
         #
 
         #Input box
         self.entry = Gtk.Entry()
         self.entry.set_placeholder_text("URL")
-        mainBox.pack_start(self.entry, True, True, 0)
+        self.mainBox.pack_start(self.entry, True, True, 0)
 
 
         #############################################################
@@ -85,18 +92,19 @@ class YouTubePlayer(Gtk.Window) :
         #
         #Check box
         checkButtonBox = Gtk.Box(spacing=10)
-        mainBox.pack_start(checkButtonBox, True, True, 0)
-        self.audioOnlyButton = Gtk.CheckButton("Audio only")
+        self.mainBox.pack_start(checkButtonBox, True, True, 0)
+        self.audioOnlyButton = Gtk.CheckButton("Audio only                                            ")
         self.audioOnlyButton.connect('toggled', self.audioOnly)
         checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
 
         self.mininalInterfaceButton = Gtk.CheckButton("Minimal interface")
-        self.mininalInterfaceButton.set_active(True)
+        #self.mininalInterfaceButton.set_active(True)
         self.mininalInterfaceButton.connect('toggled', self._mininalInterface)
-        checkButtonBox.pack_start(self.mininalInterfaceButton, True, True,0)
+        #checkButtonBox.pack_start(self.mininalInterfaceButton, True, True,0)
 
         #Download and info Box
         dliBox = Gtk.Box(spacing=10)
+        dliBox.set_size_request(50, 10)
         checkButtonBox.pack_start(dliBox, True, True, 0)
 
         #Download button
@@ -125,7 +133,6 @@ class YouTubePlayer(Gtk.Window) :
 
         self.buttonBox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         Gtk.StyleContext.add_class(self.buttonBox.get_style_context(), "linked")
-        self.add(mainBox)
 
         #Previous button
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-skip-backward-symbolic"), Gtk.IconSize.BUTTON)
@@ -146,10 +153,10 @@ class YouTubePlayer(Gtk.Window) :
         self.buttonBox.pack_start(self.nextButton, True, True, 0)
 
         #Show all button
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-down"), Gtk.IconSize.BUTTON)
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-up-symbolic"), Gtk.IconSize.BUTTON)
         self.showAllButton = Gtk.Button(image=img)
         self.showAllButton.connect('clicked', self.showAllClicked)
-        mainBox.pack_end(self.showAllButton, True, True, 0)
+        headerBar.pack_end(self.showAllButton)
 
 
         adj = Gtk.Adjustment(0.0, 0.0, 100.0, 1.0, 10.0, 10.0)
@@ -181,12 +188,6 @@ class YouTubePlayer(Gtk.Window) :
         self.mpris.pl = self
         bus = SessionBus()
         bus.publish('org.mpris.MediaPlayer2.YouTubePlayer', self.mpris, ("/org/mpris/MediaPlayer2", self.mpris) )
-        loop = GLib.MainLoop()
-        '''
-        mprisThread = threading.Thread(target=loop.run)
-        mprisThread.setDaemon(True)
-        mprisThread.start()
-        '''
         ##
 
 
@@ -198,11 +199,21 @@ class YouTubePlayer(Gtk.Window) :
         self.currentTime.hide()
         self.totalTime.hide()
         self.videoEventbox.hide()
-        self.showAllButton.hide()
 
     def showAllClicked(self, widget) :
-        self.show_all()
-        self.showAllButton.hide()
+        if self.ALL_SHOWN :
+            img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-down-symbolic"), Gtk.IconSize.BUTTON)
+            widget.set_image(img)
+            self.mainBox.hide()
+            self.ALL_SHOWN = False
+        else :
+            img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-up-symbolic"), Gtk.IconSize.BUTTON)
+            widget.set_image(img)
+            self.mainBox.show()
+            self.ALL_SHOWN = True
+            if self.AUDIO_ONLY:
+                self.videoEventbox.hide()
+
 
     def play(self, widget) :
         url = self.entry.get_text()
@@ -269,7 +280,6 @@ class YouTubePlayer(Gtk.Window) :
     def _realized(self, widget, data=None) :
         self.windowID = widget.get_window().get_xid()
 
-
     def _playPlaylist(self) :
         video = self.playList['items'][self.vidNo]['pafy']
         self._openVLCShell(video)
@@ -303,6 +313,7 @@ class YouTubePlayer(Gtk.Window) :
         if self.AUDIO_ONLY == True :
             self.set_resizable(False)
             self.videoEventbox.hide()
+            #self.showAllButton.hide()
             try :
                 audio_url = video.getbestaudio().url
             except OSError:
@@ -320,6 +331,7 @@ class YouTubePlayer(Gtk.Window) :
                 self.player.set_xwindow(self.windowID)
                 self.videoEventbox.show()
                 self.showAllButton.show()
+                '''
                 self.infoLabel.hide()
                 self.audioOnlyButton.hide()
                 self.downloadButton.hide()
@@ -327,6 +339,8 @@ class YouTubePlayer(Gtk.Window) :
                 self.mininalInterfaceButton.hide()
                 self.helpButton.hide()
                 self.stopButton.hide()
+                '''
+                self.mainBox.hide()
                 self.player.set_mrl(video_url)
                 self.player.play()
             else :
