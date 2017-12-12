@@ -5,18 +5,21 @@ Search and play videos from YouTube directly using vlc with the ability to strea
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
   <img src="/images/screenshots/screenshot2.png?raw=true" alt="YouTube Player"/>
 </p>
+<p align="center">
+  <img src="/images/screenshots/screenshot3.png?raw=true" alt="YouTube Player"/>
+</p>
 
 
 ## Features
 - Minimial UI.
 - Search, play and download audio or video.
 - Auto correction of metadata (from last.fm) whenever possible.
-- Control through mpris2.
+- Control through mpris.
 - Music controls integrated into title bar.
-- Ability to use vlc's minimal interface while playing video.
 
 ## Dependencies
 - [Python 3](https://www.python.org/download/releases/3.0/)
+- [libvlc](https://github.com/oaubert/python-vlc)
 - [Pafy](https://pypi.python.org/pypi/pafy)
 - [youtube-dl](https://github.com/rg3/youtube-dl)
 - [pyGObject](https://pygobject.readthedocs.io/en/latest/)
@@ -28,7 +31,7 @@ Install the dependencies.
 ```bash
 $ sudo apt install python3 python-pip    # For ubuntu
 $ sudo pacman -S python3 python-pip      # For Arch derivatives
-$ sudo -H pip install --upgrade pygobject pafy youtube-dl pydbus mutagen
+$ sudo -H pip install --upgrade pygobject python-vlc pafy youtube-dl pydbus mutagen
 ```
 After installing the dependencies, clone the repository and run main.py.
 ```bash
@@ -47,13 +50,8 @@ $ ./main.py
 - Press the stop button to stop the running instance of vlc. Ideally this should be done before playing a new video, but is not necessary.
 - The help page includes the above information.
 
-### Known Issues
-
-- The seek bar functions awkwardly at times.
-
 ### Upcoming features
 
 - Improved search.
 - More download options.
-- Support for more players. (mpv)
 - Better support for windows (Chances are thin).
