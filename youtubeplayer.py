@@ -5,7 +5,7 @@ from mutagen import mp4
 import urllib
 import threading
 import os
-from time import sleep
+from time import sleep, time
 
 ##
 import helpwindow
@@ -16,9 +16,9 @@ import vlc
 ##
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gio, GLib, GObject
+from gi.repository import Gtk, Gdk, Gio, GLib, GObject
 
-oldURL = None
+oldTime = 0
 instance = vlc.Instance('--no-xlib')
 
 class YouTubePlayer(Gtk.Window) :
@@ -33,6 +33,7 @@ class YouTubePlayer(Gtk.Window) :
         self.clickCounter = 0
         self.playList=[]
         self.totalTracks=0
+        self.isFullScreen = False
 
         ##
         #Metadata
@@ -64,9 +65,13 @@ class YouTubePlayer(Gtk.Window) :
         ###Video box
         self.videoEventbox = Gtk.EventBox()
         self.videoEventbox.set_property("margin", 0)
+        self.videoEventbox.connect('button-press-event', self.clickOnVideo)
         self.video = Gtk.DrawingArea()
         self.video.set_size_request(500, 250)
+
+
         self.video.connect('realize', self._realized)
+        self.video.connect('draw', self.onDraw)
         self.videoEventbox.add(self.video)
 
         superBox.pack_start(self.videoEventbox, True, True, 0)
@@ -193,6 +198,11 @@ class YouTubePlayer(Gtk.Window) :
 
         #############################################################
 
+    def onDraw(self, w, cr) :
+        cr.set_source_rgb(0, 0, 0)
+        cr.rectangle(0, 0, w.get_allocated_width(), w.get_allocated_height())
+        cr.fill()
+
     def show(self) :
         self.show_all()
         self.seekBar.hide()
@@ -213,6 +223,21 @@ class YouTubePlayer(Gtk.Window) :
             self.ALL_SHOWN = True
             if self.AUDIO_ONLY:
                 self.videoEventbox.hide()
+
+    def clickOnVideo(self, widget, event) :
+        global oldTime
+        if time() - oldTime < 0.2 :
+            if self.isFullScreen:
+                self.unfullscreen()
+                self.isFullScreen = False
+                self.mainBox.show()
+            else :
+                self.mainBox.hide()
+                self.fullscreen()
+                #self.video.emit('draw')
+                self.isFullScreen =True
+
+        oldTime = time()
 
 
     def play(self, widget) :
@@ -327,28 +352,12 @@ class YouTubePlayer(Gtk.Window) :
                 video_url = video.getbest().url
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
-            if self.MINIMAL_INTERFACE :
-                self.player.set_xwindow(self.windowID)
-                self.videoEventbox.show()
-                self.showAllButton.show()
-                '''
-                self.infoLabel.hide()
-                self.audioOnlyButton.hide()
-                self.downloadButton.hide()
-                self.entry.hide()
-                self.mininalInterfaceButton.hide()
-                self.helpButton.hide()
-                self.stopButton.hide()
-                '''
-                self.mainBox.hide()
-                self.player.set_mrl(video_url)
-                self.player.play()
-            else :
-                #TODO
-                self.player.set_xwindow(self.windowID)
-                self.videoEventbox.show()
-                self.player.set_mrl(video_url)
-                self.player.play()
+            #TODO
+            self.player.set_xwindow(self.windowID)
+            self.player.video_set_mouse_input(False)
+            self.videoEventbox.show()
+            self.player.set_mrl(video_url)
+            self.player.play()
 
         self.currentTime.show()
         self.seekBar.show()
@@ -531,6 +540,10 @@ class YouTubePlayer(Gtk.Window) :
                     self._playPlaylist()
                 else:
                     self.videoEventbox.hide()
+                    self.seekBar.hide()
+                    self.currentTime.hide()
+                    self.totalTime.hide()
+                    self.set_resizable(False)
                     self.infoLabel.set_text('All songs have been played')
 
             GObject.idle_add(self.currentTime.set_text, self._secondsToTime(currentTime), priority=GObject.PRIORITY_DEFAULT)

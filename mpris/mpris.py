@@ -16,7 +16,7 @@ class MPRIS(object) :
         self.pl.next(None)
 
     def Previous(self) :
-        self.pl.prev(None)
+        self.pl.previous(None)
 
     def Pause(self) :
         print("pause")
