@@ -1,5 +1,5 @@
 # YoutubePlayer
-Search and play videos from YouTube directly using vlc with the ability to stream audio only. Built on Gtk 3. Download video or audio from youtube directly. Song metadata including album art is automatically fixed when you stream or download a song.
+Search and play videos from YouTube directly with the ability to stream audio only. Download video or audio from youtube directly. Song metadata including album art is automatically fixed when you stream or download a song.
 
 <p align="center">
   <img src="/images/screenshots/screenshot1.png?raw=true" alt="YouTube Player"/>
@@ -37,9 +37,19 @@ After installing the dependencies, clone the repository and run main.py.
 ```bash
 $ git clone https://github.com/vn-ki/YoutubePlayer.git
 $ cd YoutubePlayer
-$ chmod +x main.py
-$ ./main.py
+$ chmod +x YouTubePlayer
+$
+$ # Installation
+$ ./YouTubePlayer install
+$
+$ # Uninstallation
+$ ./YouTubePlayer uninstall
+$
+$ # Demo Run
+$ ./YouTubePlayer run
 ```
+
+
 
 ## Usage
 
