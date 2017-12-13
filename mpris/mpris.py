@@ -6,7 +6,9 @@ from gi.repository import GLib
 
 class MPRIS(object) :
     def Raise(self) :
-        print("Raise")
+        self.pl.set_keep_above(True)
+        self.pl.set_keep_above(False)
+        self.pl.present()
         return
 
     def Quit(self) :

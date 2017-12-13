@@ -16,7 +16,10 @@ import vlc
 ##
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, Gio, GLib, GObject
+gi.require_version('Notify', '0.7')
+from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Notify
+
+Notify.init('YouTube Player')
 
 oldTime = 0
 instance = vlc.Instance('--no-xlib')
@@ -101,11 +104,6 @@ class YouTubePlayer(Gtk.Window) :
         self.audioOnlyButton = Gtk.CheckButton("Audio only                                            ")
         self.audioOnlyButton.connect('toggled', self.audioOnly)
         checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
-
-        self.mininalInterfaceButton = Gtk.CheckButton("Minimal interface")
-        #self.mininalInterfaceButton.set_active(True)
-        self.mininalInterfaceButton.connect('toggled', self._mininalInterface)
-        #checkButtonBox.pack_start(self.mininalInterfaceButton, True, True,0)
 
         #Download and info Box
         dliBox = Gtk.Box(spacing=10)
@@ -230,7 +228,8 @@ class YouTubePlayer(Gtk.Window) :
             if self.isFullScreen:
                 self.unfullscreen()
                 self.isFullScreen = False
-                self.mainBox.show()
+                if self.ALL_SHOWN :
+                    self.mainBox.show()
             else :
                 self.mainBox.hide()
                 self.fullscreen()
@@ -306,7 +305,11 @@ class YouTubePlayer(Gtk.Window) :
         self.windowID = widget.get_window().get_xid()
 
     def _playPlaylist(self) :
-        video = self.playList['items'][self.vidNo]['pafy']
+        try :
+            video = self.playList['items'][self.vidNo]['pafy']
+        except e :
+            print(e)
+            return
         self._openVLCShell(video)
 
     def _openVLCShell(self, video) :
@@ -343,6 +346,7 @@ class YouTubePlayer(Gtk.Window) :
                 audio_url = video.getbestaudio().url
             except OSError:
                 self.infoLabel.set_text("Can't play the requested video")
+                return
             self.player.set_mrl(audio_url)
             self.player.play()
 
@@ -359,6 +363,10 @@ class YouTubePlayer(Gtk.Window) :
             self.player.set_mrl(video_url)
             self.player.play()
 
+        if not self.is_active() and metadata!= None:
+            icon_path = os.path.realpath('images/icons/yt-icon.png')
+            Notify.Notification.new(metadata['track_title'], metadata['album']+'\n'+metadata['artist'], icon_path).show()
+
         self.currentTime.show()
         self.seekBar.show()
         self.totalTime.show()
@@ -367,7 +375,9 @@ class YouTubePlayer(Gtk.Window) :
         if self.vidNo!=self.totalTracks:
             self.player.stop()
             self.vidNo += 1
-            self._playPlaylist()
+            thread = threading.Thread(target=self._playPlaylist)
+            thread.setDaemon(True)
+            thread.start()
 
         else:
             self.infoLabel.set_text('All songs have been played')
@@ -472,10 +482,6 @@ class YouTubePlayer(Gtk.Window) :
 
     def audioOnly(self, widget) :
         self.AUDIO_ONLY = widget.get_active()
-        if self.AUDIO_ONLY:
-            self.mininalInterfaceButton.set_sensitive(False)
-        else :
-            self.mininalInterfaceButton.set_sensitive(True)
         return
 
     def _getFirstYTResultURL(self, query)  :
@@ -527,9 +533,6 @@ class YouTubePlayer(Gtk.Window) :
 
         except AttributeError :
             self.infoLabel.set_text("VLC is not running.")
-
-    def _mininalInterface(self, widget) :
-        self.MINIMAL_INTERFACE = widget.get_active()
 
     def _setSeekBar(self) :
         if self.player.get_state() != vlc.State.NothingSpecial :
