@@ -1,0 +1,31 @@
+#!/bin/bash
+
+INSTALLDIR="/opt/YouTubePlayer"
+ICONDIR="/usr/share/icons/hicolor/scalable/apps/youtubeplayer"
+
+CMD="$1"
+
+if [ $CMD = "install" ]; then
+  echo "Installing.."
+  sudo cp -r . $INSTALLDIR
+  sudo chmod +x $INSTALLDIR/main.py
+  echo "Installing icons"
+  sudo cp ./images/icons/youtube.svg $ICONDIR
+  sudo cp ./core/YouTubePlayer.desktop /usr/share/applications/YouTubePlayer.desktop
+  echo "Installation finished"
+
+elif [ $CMD = "uninstall" ]; then
+  echo "Uninstalling.."
+  sudo rm -rf $INSTALLDIR
+  sudo rm $ICONDIR
+  sudo rm /usr/share/applications/YouTubePlayer.desktop
+  echo "Uninstallation finished"
+
+elif [ $CMD = "update" ]; then
+  cd /opt/YouTubePlayer
+  sudo git pull
+
+elif [ $CMD = "run" ]; then
+  echo "Opening YouTube Player"
+  exec ./main.py
+fi

@@ -8,7 +8,7 @@ import os
 from time import sleep, time
 
 ##
-import helpwindow
+import core.helpwindow as helpwindow
 from mpris.mpris import *
 from pydbus import SessionBus
 import pkg_resources
@@ -42,6 +42,7 @@ class YouTubePlayer(Gtk.Window) :
         #Metadata
 
         self.title = None
+
         ##
         Gtk.Window.__init__(self)
         #self.set_border_width(10)

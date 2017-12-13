@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=YouTube Player
+Comment=Play videos from YouTube
+Path=/opt/YouTubePlayer
+Exec=/opt/YouTubePlayer/main.py
+Icon=/opt/YouTubePlayer/images/icons/youtube.svg
+Terminal=false
