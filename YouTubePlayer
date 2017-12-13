@@ -9,8 +9,6 @@ if [ $CMD = "install" ]; then
   echo "Installing.."
   sudo cp -r . $INSTALLDIR
   sudo chmod +x $INSTALLDIR/main.py
-  echo "Installing icons"
-  sudo cp ./images/icons/youtube.svg $ICONDIR
   sudo cp ./core/YouTubePlayer.desktop /usr/share/applications/YouTubePlayer.desktop
   echo "Installation finished"
 
@@ -22,8 +20,10 @@ elif [ $CMD = "uninstall" ]; then
   echo "Uninstallation finished"
 
 elif [ $CMD = "update" ]; then
+  echo "Updating.."
   cd /opt/YouTubePlayer
   sudo git pull
+  echo "Update Finished!"
 
 elif [ $CMD = "run" ]; then
   echo "Opening YouTube Player"

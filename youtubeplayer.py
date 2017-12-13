@@ -41,7 +41,7 @@ class YouTubePlayer(Gtk.Window) :
         ##
         #Metadata
 
-        self.title = None
+        self.title = "YouTubePlayer"
 
         ##
         Gtk.Window.__init__(self)
@@ -51,7 +51,6 @@ class YouTubePlayer(Gtk.Window) :
         #Title bar tweaks
         headerBar = Gtk.HeaderBar()
         headerBar.set_show_close_button(True)
-        headerBar.props.title = None
         self.set_titlebar(headerBar)
         self.set_resizable(False)
         #
@@ -142,23 +141,27 @@ class YouTubePlayer(Gtk.Window) :
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-skip-backward-symbolic"), Gtk.IconSize.BUTTON)
         self.prevButton = Gtk.Button(image=img, name='prev-button')
         self.prevButton.connect('clicked', self.previous)
+        self.prevButton.set_focus_on_click(False)
         self.buttonBox.pack_start(self.prevButton, True, True, 0)
 
         #Play button
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
         self.playButton = Gtk.Button(image=img, name='play-button')
         self.playButton.connect('clicked', self.play)
+        self.playButton.set_focus_on_click(False)
         self.buttonBox.pack_start(self.playButton, True, True, 0)
 
         #Next button
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-skip-forward-symbolic"), Gtk.IconSize.BUTTON)
         self.nextButton = Gtk.Button(image=img, name='next-button')
         self.nextButton.connect('clicked', self.next)
+        self.nextButton.set_focus_on_click(False)
         self.buttonBox.pack_start(self.nextButton, True, True, 0)
 
         #Show all button
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-up-symbolic"), Gtk.IconSize.BUTTON)
         self.showAllButton = Gtk.Button(image=img)
+        self.showAllButton.set_focus_on_click(False)
         self.showAllButton.connect('clicked', self.showAllClicked)
         headerBar.pack_end(self.showAllButton)
 
@@ -171,6 +174,7 @@ class YouTubePlayer(Gtk.Window) :
         self.seekBar = Gtk.Scale.new(Gtk.Orientation.HORIZONTAL, adj)
         self.seekBar.set_hexpand(True)
         self.seekBar.set_draw_value(False)
+        self.seekBar.set_focus_on_click(False)
         self.seekBar.set_property("width-request", 150)
         self.seekBar.set_digits(1)
         self.seekBar.set_value(0)
@@ -346,7 +350,11 @@ class YouTubePlayer(Gtk.Window) :
             try :
                 audio_url = video.getbestaudio().url
             except OSError:
+                # Error retrieving the video
+                #TODO Retry 3 times on receving error
                 self.infoLabel.set_text("Can't play the requested video")
+                if self.vidNo != self.totalTracks :
+                    self.next(None)
                 return
             self.player.set_mrl(audio_url)
             self.player.play()
@@ -356,7 +364,10 @@ class YouTubePlayer(Gtk.Window) :
             try :
                 video_url = video.getbest().url
             except OSError:
+                if self.vidNo != self.totalTracks :
+                    self.next(None)
                 self.infoLabel.set_text("Can't play the requested video")
+                return
             #TODO
             self.player.set_xwindow(self.windowID)
             self.player.video_set_mouse_input(False)
@@ -539,6 +550,7 @@ class YouTubePlayer(Gtk.Window) :
         if self.player.get_state() != vlc.State.NothingSpecial :
             currentTime = self.player.get_time()//1000
             if currentTime==self.length-1:
+                '''
                 if self.vidNo!=self.totalTracks:
                     self.vidNo += 1
                     self._playPlaylist()
@@ -549,6 +561,8 @@ class YouTubePlayer(Gtk.Window) :
                     self.totalTime.hide()
                     self.set_resizable(False)
                     self.infoLabel.set_text('All songs have been played')
+                '''
+                self.next(None)
 
             GObject.idle_add(self.currentTime.set_text, self._secondsToTime(currentTime), priority=GObject.PRIORITY_DEFAULT)
             GObject.idle_add(self.seekBar.set_value, int((float(currentTime)/self.length)*100), priority=GObject.PRIORITY_DEFAULT)
