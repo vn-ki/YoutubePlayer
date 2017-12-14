@@ -9,6 +9,7 @@ from time import sleep, time
 
 ##
 import core.helpwindow as helpwindow
+from core import searchwindow
 from mpris.mpris import *
 from pydbus import SessionBus
 import pkg_resources
@@ -94,40 +95,39 @@ class YouTubePlayer(Gtk.Window) :
         self.entry.set_placeholder_text("URL")
         self.mainBox.pack_start(self.entry, True, True, 0)
 
-
         #############################################################
         #Button for 2nd line, checkbox and download button
         #
         #Check box
-        checkButtonBox = Gtk.Box(spacing=10)
+        checkButtonBox = Gtk.Box(spacing=6)
         self.mainBox.pack_start(checkButtonBox, True, True, 0)
-        self.audioOnlyButton = Gtk.CheckButton("Audio only                                            ")
-        self.audioOnlyButton.connect('toggled', self.audioOnly)
-        checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
-
-        #Download and info Box
-        dliBox = Gtk.Box(spacing=10)
-        dliBox.set_size_request(50, 10)
-        checkButtonBox.pack_start(dliBox, True, True, 0)
-
         #Download button
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="document-save-symbolic"), Gtk.IconSize.BUTTON)
-        self.downloadButton = Gtk.Button( image=img, name='download-button')
-        self.downloadButton.set_property("width-request", 30)
-        self.downloadButton.connect('clicked', self.download)
-        dliBox.pack_start(self.downloadButton, True,True,0)
+        toolbar = Gtk.Toolbar()
+        checkButtonBox.pack_start(toolbar, True,True,0)
 
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-stop-symbolic"), Gtk.IconSize.BUTTON)
-        self.stopButton = Gtk.Button( image=img, name='quitvlc-button')
-        self.stopButton.set_property("width-request", 30)
-        self.stopButton.connect('clicked', self._quitVLC)
-        dliBox.pack_start(self.stopButton, True,True,0)
+        self.audioOnlyButton = Gtk.ToggleToolButton()
+        self.audioOnlyButton.connect('toggled', self.audioOnly)
+        self.audioOnlyButton.set_icon_name('audio-speakers-symbolic')
+        toolbar.add(self.audioOnlyButton)
 
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="help-about-symbolic"), Gtk.IconSize.BUTTON)
-        self.helpButton = Gtk.Button( image=img, name='help-button')
-        self.helpButton.set_property("width-request", 30)
+        self.helpButton = Gtk.ToolButton()
         self.helpButton.connect('clicked', self._showHelp)
-        dliBox.pack_start(self.helpButton, True,True,0)
+        self.helpButton.set_icon_name('preferences-system-symbolic')
+        toolbar.add(self.helpButton)
+
+        self.downloadButton = Gtk.ToolButton()
+        self.downloadButton.connect('clicked', self.downloadButtonClicked)
+        self.downloadButton.set_icon_name('folder-download-symbolic')
+        toolbar.add(self.downloadButton)
+
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="system-search-symbolic"), Gtk.IconSize.BUTTON)
+        self.searchButton = Gtk.Button( image=img, name='quitvlc-button')
+        self.searchButton.set_property("width-request", 30)
+        self.searchButton.connect('clicked', self.searchButtonClicked)
+        checkButtonBox.pack_start(self.searchButton, True,True,0)
+
+
         #############################################################
 
         #############################################################
@@ -186,9 +186,11 @@ class YouTubePlayer(Gtk.Window) :
         headerBar.set_decoration_layout('menu:close')
         headerBar.pack_start(self.currentTime)
 
+        self.setUpPopover()
     #    seekBox.pack_start(self.seekBar, True, True, 0)
         headerBar.pack_end(self.totalTime)
         GLib.timeout_add_seconds(1, self._setSeekBar)
+
 
         ##
         self.mpris = MPRIS()
@@ -199,12 +201,41 @@ class YouTubePlayer(Gtk.Window) :
         ##
 
 
+
         #############################################################
+
+    def setUpPopover(self) :
+        self.downloadPopover = Gtk.Popover()
+        self.downloadPopover.set_position(Gtk.PositionType.RIGHT)
+        self.downloadPopover.set_relative_to(self.downloadButton)
+
+        self.downloadOptions = Gtk.Box(spacing = 7, orientation=Gtk.Orientation.VERTICAL)
+        self.downloadPopover.add(self.downloadOptions)
+
+        checkbutton = Gtk.CheckButton("Extract audio")
+        self.downloadOptions.add(checkbutton)
+        checkbutton = Gtk.CheckButton("A CheckButton widget2")
+        self.downloadOptions.add(checkbutton)
 
     def onDraw(self, w, cr) :
         cr.set_source_rgb(0, 0, 0)
         cr.rectangle(0, 0, w.get_allocated_width(), w.get_allocated_height())
         cr.fill()
+
+    def searchButtonClicked(self, widget) :
+        query = self.entry.get_text()
+        '''
+        thread = threading.Thread(target=self.showSearch, args=[query])
+        thread.start()
+        '''
+        self.showSearch(query)
+
+    def showSearch(self, query) :
+        window = searchwindow.SearchWindow()
+        window.connect("delete-event", Gtk.main_quit)
+        window.populate_box(query)
+        window.show_all()
+        Gtk.main()
 
     def show(self) :
         self.show_all()
@@ -245,7 +276,9 @@ class YouTubePlayer(Gtk.Window) :
 
 
     def play(self, widget) :
+
         url = self.entry.get_text()
+
         if url == '' : #ERROR Check ! isPlaying()
             state = self.player.get_state()
 
@@ -283,6 +316,7 @@ class YouTubePlayer(Gtk.Window) :
                 self.infoLabel.set_text("Searching for playlist")
                 url = self._getFirstYTResultURL_PL(url[2:])
                 if url == -1 : # Error loading url
+                    print('Error')
                     return
             else :
                 #Search for video
@@ -408,8 +442,9 @@ class YouTubePlayer(Gtk.Window) :
         self.player.set_time(absSeek)
         self.mpris.Seeked( absSeek*1000)
 
-    def download(self, widget) :
+    def downloadButtonClicked(self, widget) :
         #must use threading
+        self.downloadPopover.popup()
         url = self.entry.get_text()
         thread = threading.Thread(target=self._download, args=[url])
         thread.setDaemon(True)
