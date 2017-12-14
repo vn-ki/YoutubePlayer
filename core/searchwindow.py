@@ -5,7 +5,8 @@ import pafy
 import urllib
 import json
 
-PAFY_OBJECT = None
+YT_ID = None
+OPTION = None
 
 def _getYTResultURL(query, result=0)  :
     key = 'AIzaSyDvysm00R5FClmqtxcATsgpKHdt2GxCaiU'
@@ -55,6 +56,7 @@ class SearchBox(Gtk.Box) :
         title.set_line_wrap(True)
         title.set_size_request(300,-1)
         title.set_xalign(0.01)
+        self.id =id
 
         self.pack_start(title, True, True, 0)
         self.set_size_request(300, -1)
@@ -78,42 +80,8 @@ class SearchBox(Gtk.Box) :
         title.set_text(vidTitle)
 
     def playButtonClicked(self, widget) :
+        #self.ugly.emit('delete-event', None)
         pass
 
     def downloadButtonClicked(self, widget) :
         pass
-
-class SearchWindow(Gtk.Window) :
-    def __init__(self) :
-        Gtk.Window.__init__(self, title='Search')
-
-        self.set_border_width(10)
-        self.set_size_request(400, 300)
-        #self.set_resizable(False)
-
-    def populate_box(self, searchterm) :
-        mainBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing =4)
-        self.add(mainBox)
-
-        if searchterm[0] == '/' :
-            if searchterm[1] == '/' :
-                fun = _getYTResultURL_PL
-                query = searchterm[2:]
-            else :
-                fun = _getYTResultURL
-                query = searchterm[1:]
-        boxes =[]
-        frames= []
-        result = fun(query)
-        i=0
-        print(result)
-        for x in result :
-            if result == -1 :
-                print("Error")
-                continue
-            boxes += [SearchBox(x['title'], x['id'])]
-            frames += [Gtk.Frame()]
-            frames[i].add(boxes[i])
-            frames[i].set_size_request(300,-1)
-            mainBox.pack_start(frames[i], True, True, 0)
-            i+=1

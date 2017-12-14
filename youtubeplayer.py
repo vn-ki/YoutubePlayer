@@ -191,6 +191,20 @@ class YouTubePlayer(Gtk.Window) :
         headerBar.pack_end(self.totalTime)
         GLib.timeout_add_seconds(1, self._setSeekBar)
 
+        self.s_boxes =[]
+        self.s_frames= []
+
+        self.searchBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing =4)
+        self.populateSearchBox('/numb')
+
+        self.mainBox.pack_start(self.searchBox, True, True, 0)
+
+
+        '''
+
+        '''
+
+
 
         ##
         self.mpris = MPRIS()
@@ -203,6 +217,60 @@ class YouTubePlayer(Gtk.Window) :
 
 
         #############################################################
+
+    def populateSearchBox(self, searchterm) :
+        #searchterm = self.entry.get_text()
+
+
+
+        if searchterm[0] == '/' :
+            if searchterm[1] == '/' :
+                fun = searchwindow._getYTResultURL_PL
+                query = searchterm[2:]
+            else :
+                fun = searchwindow._getYTResultURL
+                query = searchterm[1:]
+
+        result = fun(query)
+        i=0
+        print(result)
+        for x in result :
+            if result == -1 :
+                print("Error")
+                continue
+            self.s_boxes += [searchwindow.SearchBox(x['title'], x['id'])]
+            self.s_frames += [Gtk.Frame()]
+            self.s_frames[i].add(self.s_boxes[i])
+            self.s_frames[i].set_size_request(500,-1)
+            self.searchBox.pack_start(self.s_frames[i], True, True, 0)
+            i+=1
+
+        for box in self.s_boxes :
+            #box.connect('play-button-pressed', self.spButtonPressed)
+            #box.connect('dl-button-pressed', self.sdlButtonPressed)
+            pass
+        self.searchBox.hide()
+        self.searchBox.show()
+
+    def spButtonPressed(self) :
+        pass
+    def sdlButtonPressed(self) :
+        pass
+
+    def unpopulate_box(self) :
+        try :
+            for i in  range(0, 5) :
+                self.s_frames[i].remove(self.s_boxes[i])
+        except :
+            pass
+        '''
+        try :
+            self.mainBox.remove(self.searchBox)
+        except :
+            pass
+        '''
+        for x in self.searchBox.get_children() :
+            self.searchBox.remove(x)
 
     def setUpPopover(self) :
         self.downloadPopover = Gtk.Popover()
@@ -228,14 +296,9 @@ class YouTubePlayer(Gtk.Window) :
         thread = threading.Thread(target=self.showSearch, args=[query])
         thread.start()
         '''
-        self.showSearch(query)
+        self.unpopulate_box()
+        self.populateSearchBox(query)
 
-    def showSearch(self, query) :
-        window = searchwindow.SearchWindow()
-        window.connect("delete-event", Gtk.main_quit)
-        window.populate_box(query)
-        window.show_all()
-        Gtk.main()
 
     def show(self) :
         self.show_all()
