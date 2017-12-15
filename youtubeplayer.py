@@ -236,7 +236,7 @@ class YouTubePlayer(Gtk.Window) :
             t = self.entry.get_text()
             if t==' ':
                 self.entry.set_text("")
-            self.play(None)
+                self.play(None)
 
         elif key == F11 :
             self.full_unfull()
@@ -328,13 +328,13 @@ class YouTubePlayer(Gtk.Window) :
         if url[0] == '/' : # search term
             if url[1] == '/' :
                 # Search for playlist
-                self.infoLabel.set_text("Searching for playlist")
+                GObject.idle_add(self.infoLabel.set_text,"Searching for playlist", priority=GObject.PRIORITY_DEFAULT)
                 url = self._getFirstYTResultURL_PL(url[2:])
                 if url == -1 : # Error loading url
                     return
             else :
                 #Search for video
-                self.infoLabel.set_text("Searching for video")
+                GObject.idle_add(self.infoLabel.set_text,"Searching for video", priority=GObject.PRIORITY_DEFAULT)
                 url = self._getFirstYTResultURL(url[1:])
                 if url == -1 : # Error loading url
                     return
@@ -343,10 +343,10 @@ class YouTubePlayer(Gtk.Window) :
             try :
                 vid = pafy.new(url)
             except ValueError:
-                self.infoLabel.set_text("Use /<search_query>. Don't ask me why. XD")
+                GObject.idle_add(self.infoLabel.set_text,"Use /<search_query>. Don't ask me why. XD", priority=GObject.PRIORITY_DEFAULT)
                 return
             except :
-                self.infoLabel.set_text("Error getting video")
+                GObject.idle_add(self.infoLabel.set_text,"Error getting video", priority=GObject.PRIORITY_DEFAULT)
                 return
             self._openVLCShell(vid)
 
@@ -354,10 +354,10 @@ class YouTubePlayer(Gtk.Window) :
             try :
                 playlist = pafy.get_playlist(url)
             except ValueError :
-                self.infoLabel.set_text("Use //<search_query>. Don't ask me why. XD")
+                GObject.idle_add(self.infoLabel.set_text,"Use //<search_query>. Don't ask me why. XD", priority=GObject.PRIORITY_DEFAULT)
                 return
             except :
-                self.infoLabel.set_text("Error getting playlist")
+                GObject.idle_add(self.infoLabel.set_text,"Error getting playlist", priority=GObject.PRIORITY_DEFAULT)
                 return
             self.totalTracks=len(playlist['items'])
             self.infoLabel.set_text(playlist['title'])
@@ -382,7 +382,7 @@ class YouTubePlayer(Gtk.Window) :
         self.totalTime.set_text(self._secondsToTime(self.length))
 
         if metadata == None :
-            self.infoLabel.set_text(video.title)
+            GObject.idle_add(self.infoLabel.set_text,video.title, priority=GObject.PRIORITY_DEFAULT)
             self.mpris.Metadata = {
                 'xesam:title' :GLib.Variant('s', video.title),
                 'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
@@ -390,7 +390,7 @@ class YouTubePlayer(Gtk.Window) :
             }
 
         else :
-            self.infoLabel.set_text(metadata['track_title']+ ' - ' + metadata['artist'])
+            GObject.idle_add(self.infoLabel.set_text,metadata['track_title']+ ' - ' + metadata['artist'], priority=GObject.PRIORITY_DEFAULT)
             self.mpris.Metadata = {
                 'xesam:title' :GLib.Variant('s', metadata['track_title']),
                 'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
@@ -402,15 +402,15 @@ class YouTubePlayer(Gtk.Window) :
 
 
         if self.AUDIO_ONLY == True :
-            self.set_resizable(False)
-            self.videoEventbox.hide()
+            GObject.idle_add(self.set_resizable,False, priority=GObject.PRIORITY_DEFAULT)
+            GObject.idle_add(self.videoEventbox.hide)
             #self.showAllButton.hide()
             try :
                 audio_url = video.getbestaudio().url
             except OSError:
                 # Error retrieving the video
                 #TODO Retry 3 times on receving error
-                self.infoLabel.set_text("Can't play the requested video")
+                GObject.idle_add(self.infoLabel.set_text,"Can't play the requested video", priority=GObject.PRIORITY_DEFAULT)
                 if self.vidNo != self.totalTracks :
                     self.next(None)
                 return
@@ -418,18 +418,18 @@ class YouTubePlayer(Gtk.Window) :
             self.player.play()
 
         else :
-            self.set_resizable(True)
+            GObject.idle_add(self.set_resizable,True, priority=GObject.PRIORITY_DEFAULT)
             try :
                 video_url = video.getbest().url
             except OSError:
                 if self.vidNo != self.totalTracks :
                     self.next(None)
-                self.infoLabel.set_text("Can't play the requested video")
+                GObject.idle_add(self.infoLabel.set_text,"Can't play the requested video", priority=GObject.PRIORITY_DEFAULT)
                 return
             #TODO
             self.player.set_xwindow(self.windowID)
             self.player.video_set_mouse_input(False)
-            self.videoEventbox.show()
+            GObject.idle_add(self.videoEventbox.show)
             self.player.set_mrl(video_url)
             self.player.play()
 
@@ -437,13 +437,13 @@ class YouTubePlayer(Gtk.Window) :
             icon_path = os.path.realpath('images/icons/yt-icon.png')
             Notify.Notification.new(metadata['track_title'], metadata['album']+'\n'+metadata['artist'], icon_path).show()
 
-        self.currentTime.show()
-        self.seekBar.show()
-        self.totalTime.show()
+        GObject.idle_add(self.currentTime.show)
+        GObject.idle_add(self.seekBar.show)
+        GObject.idle_add(self.totalTime.show)
         self.mpris.PlaybackStatus = "Playing"
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
-        self.playButton.set_image(img)
-        self.entry.set_text('')
+        GObject.idle_add(self.playButton.set_image,img, priority=GObject.PRIORITY_DEFAULT)
+        GObject.idle_add(self.entry.set_text,"", priority=GObject.PRIORITY_DEFAULT)
 
     def next(self, widget) :
         if self.vidNo!=self.totalTracks:
@@ -471,7 +471,6 @@ class YouTubePlayer(Gtk.Window) :
         self.mpris.Seeked(self.player.get_time()*1000)
 
     def download(self, widget) :
-        #must use threading
         url = self.entry.get_text()
         thread = threading.Thread(target=self._download, args=[url])
         thread.setDaemon(True)

@@ -15,7 +15,6 @@ if [ $CMD = "install" ]; then
 elif [ $CMD = "uninstall" ]; then
   echo "Uninstalling.."
   sudo rm -rf $INSTALLDIR
-  sudo rm $ICONDIR
   sudo rm /usr/share/applications/YouTubePlayer.desktop
   echo "Uninstallation finished"
 
