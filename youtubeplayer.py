@@ -6,6 +6,7 @@ import urllib
 import threading
 import os
 from time import sleep, time
+from random import shuffle
 
 ##
 import core.helpwindow as helpwindow
@@ -114,18 +115,21 @@ class YouTubePlayer(Gtk.Window) :
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="document-save-symbolic"), Gtk.IconSize.BUTTON)
         self.downloadButton = Gtk.Button( image=img, name='download-button')
         self.downloadButton.set_property("width-request", 30)
+        self.downloadButton.set_focus_on_click(False)
         self.downloadButton.connect('clicked', self.download)
         dliBox.pack_start(self.downloadButton, True,True,0)
 
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-stop-symbolic"), Gtk.IconSize.BUTTON)
-        self.stopButton = Gtk.Button( image=img, name='quitvlc-button')
-        self.stopButton.set_property("width-request", 30)
-        self.stopButton.connect('clicked', self._quitVLC)
-        dliBox.pack_start(self.stopButton, True,True,0)
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playlist-shuffle-symbolic"), Gtk.IconSize.BUTTON)
+        self.shuffleButton = Gtk.Button( image=img, name='quitvlc-button')
+        self.shuffleButton.set_property("width-request", 10)
+        self.shuffleButton.set_focus_on_click(False)
+        self.shuffleButton.connect('clicked', self.shuffle)
+        dliBox.pack_start(self.shuffleButton, True,True,0)
 
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="help-about-symbolic"), Gtk.IconSize.BUTTON)
         self.helpButton = Gtk.Button( image=img, name='help-button')
         self.helpButton.set_property("width-request", 30)
+        self.helpButton.set_focus_on_click(False)
         self.helpButton.connect('clicked', self._showHelp)
         dliBox.pack_start(self.helpButton, True,True,0)
         #############################################################
@@ -303,7 +307,7 @@ class YouTubePlayer(Gtk.Window) :
                 return
             self.totalTracks=len(playlist['items'])
             self.infoLabel.set_text(playlist['title'])
-            self.playList=playlist;
+            self.playList=playlist['items'];
             self._playPlaylist()
 
     def _realized(self, widget, data=None) :
@@ -311,7 +315,7 @@ class YouTubePlayer(Gtk.Window) :
 
     def _playPlaylist(self) :
         try :
-            video = self.playList['items'][self.vidNo]['pafy']
+            video = self.playList[self.vidNo]['pafy']
         except e :
             print(e)
             return
@@ -322,7 +326,7 @@ class YouTubePlayer(Gtk.Window) :
         metadata = self._getMetadata(video)
         self.length = video.length
         self.totalTime.set_text(self._secondsToTime(self.length))
-        self.mpris.PlaybackStatus = "Playing"
+
         if metadata == None :
             self.infoLabel.set_text(video.title)
             self.mpris.Metadata = {
@@ -382,6 +386,7 @@ class YouTubePlayer(Gtk.Window) :
         self.currentTime.show()
         self.seekBar.show()
         self.totalTime.show()
+        self.mpris.PlaybackStatus = "Playing"
 
     def next(self, widget) :
         if self.vidNo!=self.totalTracks:
@@ -393,6 +398,7 @@ class YouTubePlayer(Gtk.Window) :
 
         else:
             self.infoLabel.set_text('All songs have been played')
+            self.mpris.PlaybackStatus = "Stopped"
 
     def previous(self, widget):
 
@@ -534,17 +540,8 @@ class YouTubePlayer(Gtk.Window) :
         Gtk.main()
         return
 
-    def _quitVLC(self, widget) :
-        try :
-            self.seekBar.hide()
-            self.totalTime.hide()
-            self.currentTime.hide()
-            self.player.stop()
-            img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
-            self.playButton.set_image(img)
-
-        except AttributeError :
-            self.infoLabel.set_text("VLC is not running.")
+    def shuffle(self, widget) :
+        shuffle(self.playList)
 
     def _setSeekBar(self) :
         if self.player.get_state() != vlc.State.NothingSpecial :
