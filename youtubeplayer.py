@@ -16,6 +16,17 @@ import pkg_resources
 import vlc
 ##
 
+ENTER = 65293
+ESCAPE = 65307
+RIGHT = 65363
+DOWN = 65364
+LEFT = 65361
+UP = 65362
+SPACE = 32
+F11 = 65480
+F12 = 65481
+
+
 gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Notify
@@ -38,11 +49,15 @@ class YouTubePlayer(Gtk.Window) :
         self.playList=[]
         self.totalTracks=0
         self.isFullScreen = False
+        self.SEARCHED = False
+
+        Gtk.Settings.get_default().props.gtk_error_bell = False
 
         ##
         #Metadata
 
         self.title = "YouTubePlayer"
+
 
         ##
         Gtk.Window.__init__(self)
@@ -104,6 +119,7 @@ class YouTubePlayer(Gtk.Window) :
         self.mainBox.pack_start(checkButtonBox, True, True, 0)
         self.audioOnlyButton = Gtk.CheckButton("Audio only                                            ")
         self.audioOnlyButton.connect('toggled', self.audioOnly)
+        self.audioOnlyButton.set_focus_on_click(False)
         checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
 
         #Download and info Box
@@ -210,6 +226,34 @@ class YouTubePlayer(Gtk.Window) :
         cr.rectangle(0, 0, w.get_allocated_width(), w.get_allocated_height())
         cr.fill()
 
+    def keyPressed(self, widget, event, data=None) :
+        key = event.keyval
+
+        if key == ENTER :
+            self.play(None)
+
+        elif key== SPACE :
+            t = self.entry.get_text()
+            if t==' ':
+                self.entry.set_text("")
+            self.play(None)
+
+        elif key == F11 :
+            self.full_unfull()
+
+        elif self.SEARCHED == True :
+            self.selectVideo(key-47)
+
+        elif key == LEFT :
+            self._seek(self.player.get_time()-10000)
+
+        elif key == RIGHT :
+            self._seek(self.player.get_time()+10000)
+
+
+    def selectVideo(self, vidNo) :
+        return
+
     def show(self) :
         self.show_all()
         self.seekBar.hide()
@@ -234,18 +278,20 @@ class YouTubePlayer(Gtk.Window) :
     def clickOnVideo(self, widget, event) :
         global oldTime
         if time() - oldTime < 0.2 :
-            if self.isFullScreen:
-                self.unfullscreen()
-                self.isFullScreen = False
-                if self.ALL_SHOWN :
-                    self.mainBox.show()
-            else :
-                self.mainBox.hide()
-                self.fullscreen()
-                #self.video.emit('draw')
-                self.isFullScreen =True
-
+            self.full_unfull()
         oldTime = time()
+
+    def full_unfull(self) :
+        if self.isFullScreen:
+            self.unfullscreen()
+            self.isFullScreen = False
+            if self.ALL_SHOWN :
+                self.mainBox.show()
+        else :
+            self.mainBox.hide()
+            self.fullscreen()
+            #self.video.emit('draw')
+            self.isFullScreen =True
 
 
     def play(self, widget) :
@@ -267,9 +313,7 @@ class YouTubePlayer(Gtk.Window) :
                 self.infoLabel.set_text("URL field is empty.")
             return
 
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
-        self.playButton.set_image(img)
-        self.entry.set_text('')
+
         self.clickCounter = 1
 
         t = threading.Thread(target=self.openVLC, args=[url])
@@ -296,14 +340,24 @@ class YouTubePlayer(Gtk.Window) :
                     return
 
         if 'list=' not in url: #not a playlist
-            vid = pafy.new(url)
+            try :
+                vid = pafy.new(url)
+            except ValueError:
+                self.infoLabel.set_text("Use /<search_query>. Don't ask me why. XD")
+                return
+            except :
+                self.infoLabel.set_text("Error getting video")
+                return
             self._openVLCShell(vid)
 
         else: # A playlist
             try :
                 playlist = pafy.get_playlist(url)
             except ValueError :
-                self.infoLabel.set_text("Error getting playlist. Try again")
+                self.infoLabel.set_text("Use //<search_query>. Don't ask me why. XD")
+                return
+            except :
+                self.infoLabel.set_text("Error getting playlist")
                 return
             self.totalTracks=len(playlist['items'])
             self.infoLabel.set_text(playlist['title'])
@@ -387,6 +441,9 @@ class YouTubePlayer(Gtk.Window) :
         self.seekBar.show()
         self.totalTime.show()
         self.mpris.PlaybackStatus = "Playing"
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
+        self.playButton.set_image(img)
+        self.entry.set_text('')
 
     def next(self, widget) :
         if self.vidNo!=self.totalTracks:
@@ -401,7 +458,6 @@ class YouTubePlayer(Gtk.Window) :
             self.mpris.PlaybackStatus = "Stopped"
 
     def previous(self, widget):
-
         if self.vidNo !=0:
             self.vidNo -= 1
             self._playPlaylist()
@@ -412,7 +468,7 @@ class YouTubePlayer(Gtk.Window) :
 
     def _seek(self, absSeek) :
         self.player.set_time(absSeek)
-        self.mpris.Seeked( absSeek*1000)
+        self.mpris.Seeked(self.player.get_time()*1000)
 
     def download(self, widget) :
         #must use threading
@@ -547,23 +603,10 @@ class YouTubePlayer(Gtk.Window) :
         if self.player.get_state() != vlc.State.NothingSpecial :
             currentTime = self.player.get_time()//1000
             if currentTime==self.length-1:
-                '''
-                if self.vidNo!=self.totalTracks:
-                    self.vidNo += 1
-                    self._playPlaylist()
-                else:
-                    self.videoEventbox.hide()
-                    self.seekBar.hide()
-                    self.currentTime.hide()
-                    self.totalTime.hide()
-                    self.set_resizable(False)
-                    self.infoLabel.set_text('All songs have been played')
-                '''
                 self.next(None)
 
             GObject.idle_add(self.currentTime.set_text, self._secondsToTime(currentTime), priority=GObject.PRIORITY_DEFAULT)
             GObject.idle_add(self.seekBar.set_value, int((float(currentTime)/self.length)*100), priority=GObject.PRIORITY_DEFAULT)
-
 
         return True
 

@@ -12,6 +12,7 @@ import youtubeplayer
 window = youtubeplayer.YouTubePlayer()
 window.set_icon_from_file('images/icons/youtube.svg')
 window.connect("delete-event", Gtk.main_quit)
+window.connect('key-release-event', window.keyPressed)
 window.show()
 
 Gtk.main()
