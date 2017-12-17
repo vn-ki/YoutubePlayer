@@ -228,13 +228,14 @@ class YouTubePlayer(Gtk.Window) :
 
     def keyPressed(self, widget, event, data=None) :
         key = event.keyval
+        #TODO F5 to reload
 
         if key == ENTER :
             self.play(None)
 
         elif key== SPACE :
             t = self.entry.get_text()
-            if t==' ':
+            if t==' ' or t=='':
                 self.entry.set_text("")
                 self.play(None)
 
