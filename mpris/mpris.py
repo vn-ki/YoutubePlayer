@@ -38,7 +38,7 @@ class MPRIS(object) :
         pass
 
     def SetPosition(self, TrackId, Position) :
-        self._Position = Position
+        self.Position = Position
         self.pl._seek(Position//1000)
 
     def OpenUri(self, s) :
@@ -168,7 +168,6 @@ class MPRIS(object) :
     @Position.setter
     def Position(self, value) :
         self._Position = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"Position": self.Position}, [])
 
     @property
     def MinimumRate(self) :

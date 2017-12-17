@@ -10,6 +10,7 @@ from random import shuffle
 
 ##
 import core.helpwindow as helpwindow
+from core import util
 from mpris.mpris import *
 from pydbus import SessionBus
 import pkg_resources
@@ -117,7 +118,7 @@ class YouTubePlayer(Gtk.Window) :
         #Check box
         checkButtonBox = Gtk.Box(spacing=10)
         self.mainBox.pack_start(checkButtonBox, True, True, 0)
-        self.audioOnlyButton = Gtk.CheckButton("Audio only                                            ")
+        self.audioOnlyButton = Gtk.CheckButton("Audio only                              ")
         self.audioOnlyButton.connect('toggled', self.audioOnly)
         self.audioOnlyButton.set_focus_on_click(False)
         checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
@@ -128,6 +129,14 @@ class YouTubePlayer(Gtk.Window) :
         checkButtonBox.pack_start(dliBox, True, True, 0)
 
         #Download button
+
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="preferences-system-symbolic"), Gtk.IconSize.BUTTON)
+        self.helpButton = Gtk.Button( image=img, name='help-button')
+        self.helpButton.set_property("width-request", 30)
+        self.helpButton.set_focus_on_click(False)
+        self.helpButton.connect('clicked', self._showHelp)
+        dliBox.pack_start(self.helpButton, True,True,0)
+
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="document-save-symbolic"), Gtk.IconSize.BUTTON)
         self.downloadButton = Gtk.Button( image=img, name='download-button')
         self.downloadButton.set_property("width-request", 30)
@@ -136,18 +145,27 @@ class YouTubePlayer(Gtk.Window) :
         dliBox.pack_start(self.downloadButton, True,True,0)
 
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playlist-shuffle-symbolic"), Gtk.IconSize.BUTTON)
-        self.shuffleButton = Gtk.Button( image=img, name='quitvlc-button')
+        self.shuffleButton = Gtk.Button( image=img)
         self.shuffleButton.set_property("width-request", 10)
         self.shuffleButton.set_focus_on_click(False)
         self.shuffleButton.connect('clicked', self.shuffle)
         dliBox.pack_start(self.shuffleButton, True,True,0)
 
-        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="help-about-symbolic"), Gtk.IconSize.BUTTON)
-        self.helpButton = Gtk.Button( image=img, name='help-button')
-        self.helpButton.set_property("width-request", 30)
-        self.helpButton.set_focus_on_click(False)
-        self.helpButton.connect('clicked', self._showHelp)
-        dliBox.pack_start(self.helpButton, True,True,0)
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playlist-repeat-symbolic"), Gtk.IconSize.BUTTON)
+        self.repeatButton = Gtk.Button( image=img)
+        self.repeatButton.set_property("width-request", 10)
+        self.repeatButton.set_focus_on_click(False)
+        self.repeatButton.connect('clicked', self.repeatButtonClicked)
+        dliBox.pack_start(self.repeatButton, True,True,0)
+
+        img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="system-search-symbolic"), Gtk.IconSize.BUTTON)
+        self.searchButton = Gtk.Button( image=img)
+        self.searchButton.set_property("width-request", 10)
+        self.searchButton.set_focus_on_click(False)
+        self.searchButton.connect('clicked', self.searchButtonClicked)
+        dliBox.pack_start(self.searchButton, True,True,0)
+
+
         #############################################################
 
         #############################################################
@@ -206,6 +224,18 @@ class YouTubePlayer(Gtk.Window) :
         headerBar.set_decoration_layout('menu:close')
         headerBar.pack_start(self.currentTime)
 
+        self.searchBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        self.searchBox.set_property('margin', 10)
+        self.searchBox.set_size_request(450,-1)
+        superBox.pack_start(self.searchBox, True, True, 0)
+        self.searchResults = []
+
+        self.NO_OF_SEARCH_RESULT = 5
+
+        for i in range(self.NO_OF_SEARCH_RESULT) :
+            self.searchResults += [util.SearchBox()]
+            self.searchBox.pack_start(self.searchResults[i], True, True, 0)
+
     #    seekBox.pack_start(self.seekBar, True, True, 0)
         headerBar.pack_end(self.totalTime)
         GLib.timeout_add_seconds(1, self._setSeekBar)
@@ -242,8 +272,11 @@ class YouTubePlayer(Gtk.Window) :
         elif key == F11 :
             self.full_unfull()
 
-        elif self.SEARCHED == True :
-            self.selectVideo(key-47)
+        elif self.SEARCHED == True  and key-59<0:
+            self.SEARCHED = False
+            self.searchBox.hide()
+            self.entry.set_text('')
+            self.selectVideo(key-49)
 
         elif key == LEFT :
             self._seek(self.player.get_time()-10000)
@@ -253,7 +286,40 @@ class YouTubePlayer(Gtk.Window) :
 
 
     def selectVideo(self, vidNo) :
+        ytid = self.searchResults[vidNo].ytid
+        t = threading.Thread(target=self.openVLC, args=[ytid])
+        t.setDaemon(True)
+        t.start()
         return
+
+    def repeatButtonClicked(self, w) :
+        return
+
+    def searchButtonClicked(self, w) :
+        if not self.SEARCHED :
+            query = self.entry.get_text()
+
+            if query[0] == '/' :
+                fun = util._getYTResultURL
+                query = query[1:]
+                if query[0] == '/' :
+                    fun = util._getYTResultURL_PL
+                    query[1:]
+
+            results = fun(query)
+
+            for i in range(self.NO_OF_SEARCH_RESULT) :
+                self.searchResults[i].setTitleAndId(str(i+1)+': '+results[i]['title'], results[i]['id'])
+
+            self.searchBox.show()
+            self.SEARCHED = True
+
+            return
+
+        else :
+            self.searchBox.hide()
+            self.SEARCHED = False
+
 
     def show(self) :
         self.show_all()
@@ -261,12 +327,14 @@ class YouTubePlayer(Gtk.Window) :
         self.currentTime.hide()
         self.totalTime.hide()
         self.videoEventbox.hide()
+        self.searchBox.hide()
 
     def showAllClicked(self, widget) :
         if self.ALL_SHOWN :
             img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-down-symbolic"), Gtk.IconSize.BUTTON)
             widget.set_image(img)
             self.mainBox.hide()
+            self.searchBox.hide()
             self.ALL_SHOWN = False
         else :
             img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="pan-up-symbolic"), Gtk.IconSize.BUTTON)
@@ -290,6 +358,7 @@ class YouTubePlayer(Gtk.Window) :
                 self.mainBox.show()
         else :
             self.mainBox.hide()
+            self.searchBox.hide()
             self.fullscreen()
             #self.video.emit('draw')
             self.isFullScreen =True
@@ -305,11 +374,15 @@ class YouTubePlayer(Gtk.Window) :
                 self.player.play()
                 self.playButton.set_image(img)
                 self.mpris.PlaybackStatus = "Playing"
+                self.mpris.Rate =1.0
+                self.mpris.Position = self.player.get_time()*1000
             elif state == vlc.State.Playing:
                 img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-start-symbolic"), Gtk.IconSize.BUTTON)
                 self.player.pause()
                 self.playButton.set_image(img)
                 self.mpris.PlaybackStatus = "Paused"
+                self.mpris.Rate = 0.0
+                self.mpris.Position = self.player.get_time()*1000
             else :
                 self.infoLabel.set_text("URL field is empty.")
             return
@@ -330,17 +403,17 @@ class YouTubePlayer(Gtk.Window) :
             if url[1] == '/' :
                 # Search for playlist
                 GObject.idle_add(self.infoLabel.set_text,"Searching for playlist", priority=GObject.PRIORITY_DEFAULT)
-                url = self._getFirstYTResultURL_PL(url[2:])
+                url = util._getYTResultURL_PL(url[2:])[0]['id']
                 if url == -1 : # Error loading url
                     return
             else :
                 #Search for video
                 GObject.idle_add(self.infoLabel.set_text,"Searching for video", priority=GObject.PRIORITY_DEFAULT)
-                url = self._getFirstYTResultURL(url[1:])
+                url = util._getYTResultURL(url[1:])[0]['id']
                 if url == -1 : # Error loading url
                     return
 
-        if 'list=' not in url: #not a playlist
+        if len(url) == 11: #not a playlist
             try :
                 vid = pafy.new(url)
             except ValueError:
@@ -442,6 +515,7 @@ class YouTubePlayer(Gtk.Window) :
         GObject.idle_add(self.seekBar.show)
         GObject.idle_add(self.totalTime.show)
         self.mpris.PlaybackStatus = "Playing"
+        self.mpris.Rate = 1.0
         img = Gtk.Image.new_from_gicon(Gio.ThemedIcon(name="media-playback-pause-symbolic"), Gtk.IconSize.BUTTON)
         GObject.idle_add(self.playButton.set_image,img, priority=GObject.PRIORITY_DEFAULT)
         GObject.idle_add(self.entry.set_text,"", priority=GObject.PRIORITY_DEFAULT)
@@ -469,7 +543,8 @@ class YouTubePlayer(Gtk.Window) :
 
     def _seek(self, absSeek) :
         self.player.set_time(absSeek)
-        self.mpris.Seeked(self.player.get_time()*1000)
+        self.mpris.Position = self.player.get_time()*1000
+        self.mpris.Seeked(self.mpris.Position)
 
     def download(self, widget) :
         url = self.entry.get_text()
@@ -487,13 +562,13 @@ class YouTubePlayer(Gtk.Window) :
             if url[1] == '/' :
                 # Search for playlist
                 self.infoLabel.set_text("Searching for playlist")
-                url = self._getFirstYTResultURL_PL(url[2:])
+                url = util._getYTResultURL_PL(url[2:])[0]['id']
                 if url == -1 : #Error finding url
                     return
             else :
                 #Search for video
-                self.infoLabel.set_text("Searching for video")
-                url = self._getFirstYTResultURL(url[1:])
+                self.infoLabel.set_text("Searching for video")[0]
+                url = util._getYTResultURL(url[1:])[0]['id']
                 if url == -1 : #Error finding url
                     return
 
@@ -557,37 +632,6 @@ class YouTubePlayer(Gtk.Window) :
     def audioOnly(self, widget) :
         self.AUDIO_ONLY = widget.get_active()
         return
-
-    def _getFirstYTResultURL(self, query)  :
-        query_string = urllib.parse.urlencode({"search_query" : query})
-        try :
-            response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string)
-
-        except urllib.error.URLError :
-            self.infoLabel.set_text("Check your internet connection.")
-            return -1
-        html_content=response.read().decode(response.headers.get_content_charset())
-        i = str(html_content).index("watch?")
-        search_results = html_content[i+8: i+19]
-        return search_results
-
-    def _getFirstYTResultURL_PL(self, query) :
-        query_string = urllib.parse.urlencode({"search_query" :  'playlist ' + query})
-        try :
-            response = urllib.request.urlopen("https://www.youtube.com/results?" + query_string + "&sp=EgIQAw%253D%253D")
-        except urllib.error.URLError :
-            self.infoLabel.set_text("Check your internet connection.")
-            return -1
-        html_content=response.read().decode(response.headers.get_content_charset())
-        i = str(html_content).index("list=") + 5
-        search_results='https://www.youtube.com/playlist?list='
-        while html_content[i]!='\"':
-            search_results+=html_content[i]
-            i=i+1
-
-        return search_results
-
-
 
     def _showHelp(self, widget) :
         window = helpwindow.helpWindow()
