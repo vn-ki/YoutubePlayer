@@ -54,6 +54,21 @@ def _getYTResultURL_PL(query) :
 
     return search_results
 
+def writeToConfig(data) :
+    f = open('.config', 'w')
+    data = json.dumps(data)
+    f.write(data)
+    f.close()
+    return
+
+def readFromConfig() :
+    f = open('.config', 'r')
+    data = f.read()
+    data = json.loads(data)
+    f.close()
+    return data
+
+
 class SearchBox(Gtk.Frame) :
     def __init__(self, ytid='', title='') :
         Gtk.Frame.__init__(self)

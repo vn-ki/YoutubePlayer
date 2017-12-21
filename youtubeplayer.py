@@ -40,7 +40,6 @@ instance = vlc.Instance('--no-xlib')
 class YouTubePlayer(Gtk.Window) :
     def __init__(self) :
 
-        self.AUDIO_ONLY = False
         self.MINIMAL_INTERFACE = False
         self.player = instance.media_player_new()
         self.playlistThread = None
@@ -51,6 +50,18 @@ class YouTubePlayer(Gtk.Window) :
         self.totalTracks=0
         self.isFullScreen = False
         self.SEARCHED = False
+
+        self.CONFIG = {'AUDIO_ONLY':True,
+                        'VID_QUALITY' : 'High',
+                        'AUD_QUALITY' : 'High',
+                        'DL_VID_QUALITY' : 'High',
+                        'DL_AUD_QUALITY' : 'High',
+        }
+
+        try :
+            self.CONFIG = util.readFromConfig()
+        except FileNotFoundError :
+            util.writeToConfig(self.CONFIG)
 
         Gtk.Settings.get_default().props.gtk_error_bell = False
 
@@ -118,7 +129,7 @@ class YouTubePlayer(Gtk.Window) :
         #Check box
         checkButtonBox = Gtk.Box(spacing=10)
         self.mainBox.pack_start(checkButtonBox, True, True, 0)
-        self.audioOnlyButton = Gtk.CheckButton("Audio only                              ")
+        self.audioOnlyButton = Gtk.CheckButton("With Video                       ")
         self.audioOnlyButton.connect('toggled', self.audioOnly)
         self.audioOnlyButton.set_focus_on_click(False)
         checkButtonBox.pack_start(self.audioOnlyButton, True, True,0)
@@ -341,7 +352,7 @@ class YouTubePlayer(Gtk.Window) :
             widget.set_image(img)
             self.mainBox.show()
             self.ALL_SHOWN = True
-            if self.AUDIO_ONLY:
+            if self.CONFIG['AUDIO_ONLY']:
                 self.videoEventbox.hide()
 
     def clickOnVideo(self, widget, event) :
@@ -360,6 +371,7 @@ class YouTubePlayer(Gtk.Window) :
             self.mainBox.hide()
             self.searchBox.hide()
             self.fullscreen()
+
             #self.video.emit('draw')
             self.isFullScreen =True
 
@@ -475,12 +487,17 @@ class YouTubePlayer(Gtk.Window) :
             }
 
 
-        if self.AUDIO_ONLY == True :
+        if self.CONFIG['AUDIO_ONLY'] == True :
             GObject.idle_add(self.set_resizable,False, priority=GObject.PRIORITY_DEFAULT)
             GObject.idle_add(self.videoEventbox.hide)
             #self.showAllButton.hide()
             try :
-                audio_url = video.getbestaudio().url
+                if self.CONFIG['AUD_QUALITY'] == 'High' :
+                    audio_url = video.getbestaudio().url
+                elif self.CONFIG['AUD_QUALITY'] == 'Medium' :
+                    audio_url = video.audiostreams[len(video.audiostreams)//2].url
+                elif self.CONFIG['AUD_QUALITY'] == 'Low' :
+                    audio_url = video.audiostreams[0].url
             except OSError:
                 # Error retrieving the video
                 #TODO Retry 3 times on receving error
@@ -494,7 +511,12 @@ class YouTubePlayer(Gtk.Window) :
         else :
             GObject.idle_add(self.set_resizable,True, priority=GObject.PRIORITY_DEFAULT)
             try :
-                video_url = video.getbest().url
+                if self.CONFIG['VID_QUALITY'] == 'High' :
+                    video_url = video.getbest().url
+                elif self.CONFIG['VID_QUALITY'] == 'Medium' :
+                    video_url = video.streams[len(video.streams)//2].url
+                elif self.CONFIG['VID_QUALITY'] == 'Low' :
+                    video_url = video.streams[1].url
             except OSError:
                 if self.vidNo != self.totalTracks :
                     self.next(None)
@@ -577,7 +599,7 @@ class YouTubePlayer(Gtk.Window) :
             video = pafy.new(url)
 
 
-            if self.AUDIO_ONLY == True :
+            if self.CONFIG['AUDIO_ONLY'] == True :
                 self._downloadAudio(video)
 
             else:
@@ -630,14 +652,17 @@ class YouTubePlayer(Gtk.Window) :
             video.getbest(preftype="mp4").download(filepath=os.environ.get('HOME')+'/Downloads/YouTubePlayer/'+video.title+'.'+video.getbest().extension, quiet=False, callback=self._setdownloadETA)
 
     def audioOnly(self, widget) :
-        self.AUDIO_ONLY = widget.get_active()
+        self.CONFIG['AUDIO_ONLY'] = not widget.get_active()
         return
 
     def _showHelp(self, widget) :
         window = helpwindow.helpWindow()
-        window.connect("delete-event", Gtk.main_quit)
+        window.set_modal(self)
+        window.set_transient_for(self)
+        window.set_destroy_with_parent(True)
+        window.connect("delete-event", window.buttonClicked)
         window.show_all()
-        Gtk.main()
+        #Gtk.main()
         return
 
     def shuffle(self, widget) :
