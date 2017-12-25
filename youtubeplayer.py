@@ -27,6 +27,8 @@ SPACE = 32
 F11 = 65480
 F12 = 65481
 
+window = None
+
 
 gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
@@ -254,7 +256,7 @@ class YouTubePlayer(Gtk.Window) :
         ##
         self.mpris = MPRIS()
         MPRIS.dbus = pkg_resources.resource_string(__name__, "mpris/mpris.xml").decode("utf-8")
-        self.mpris.pl = self
+        self.mpris.player = self
         bus = SessionBus()
         bus.publish('org.mpris.MediaPlayer2.YouTubePlayer', self.mpris, ("/org/mpris/MediaPlayer2", self.mpris) )
         ##
@@ -598,7 +600,6 @@ class YouTubePlayer(Gtk.Window) :
         if 'list=' not in url:
             video = pafy.new(url)
 
-
             if self.CONFIG['AUDIO_ONLY'] == True :
                 self._downloadAudio(video)
 
@@ -656,12 +657,16 @@ class YouTubePlayer(Gtk.Window) :
         return
 
     def _showHelp(self, widget) :
+
+        global window
+
+        #if window == None :
         window = helpwindow.helpWindow()
         window.set_modal(self)
         window.set_transient_for(self)
         window.set_destroy_with_parent(True)
         window.connect("delete-event", window.buttonClicked)
-        window.show_all()
+        window.show_function()
         #Gtk.main()
         return
 

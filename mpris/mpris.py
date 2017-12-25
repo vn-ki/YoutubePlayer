@@ -6,40 +6,40 @@ from gi.repository import GLib
 
 class MPRIS(object) :
     def Raise(self) :
-        self.pl.set_keep_above(True)
-        self.pl.set_keep_above(False)
-        self.pl.present()
+        self.player.set_keep_above(True)
+        self.player.set_keep_above(False)
+        self.player.present()
         return
 
     def Quit(self) :
         return
 
     def Next(self) :
-        self.pl.next(None)
+        self.player.next(None)
 
     def Previous(self) :
-        self.pl.previous(None)
+        self.player.previous(None)
 
     def Pause(self) :
         print("pause")
 
     def PlayPause(self) :
-        self.pl.play(None)
+        self.player.play(None)
 
     def Stop(self) :
         print("stop")
 
     def Play(self) :
-        self.pl.play()
+        self.player.play()
         print('play')
 
     def Seek(self, o) :
-        #self.pl._seek(o/1000)
+        #self.player._seek(o/1000)
         pass
 
     def SetPosition(self, TrackId, Position) :
         self.Position = Position
-        self.pl._seek(Position//1000)
+        self.player._seek(Position//1000)
 
     def OpenUri(self, s) :
         print(s)
@@ -51,10 +51,9 @@ class MPRIS(object) :
         self._Identity = "YouTube Player"
         self._SupportedUriSchemes = ('file', 'http')
         self._SupportedMimeTypes = ('audio/mpeg')
-
+        self._Metadata = None
         self._PlaybackStatus = "Stopped"
         self._Rate = 1.0
-        self._Metadata =  { 'mpris:trackid' :  GLib.Variant('o','/org/mpris/MediaPlayer2/YouTubePlayer/1'),'xesam:title': GLib.Variant('s', 'Welcome')}
         self._Volume = 100
         self._Position = 1
         self._MinimumRate = 1.0

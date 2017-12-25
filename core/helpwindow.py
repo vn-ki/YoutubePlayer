@@ -7,13 +7,13 @@ class helpWindow(Gtk.Window) :
     def __init__(self) :
         Gtk.Window.__init__(self, title='Settings')
         self.set_border_width(10)
-        self.set_size_request(400, 400)
+        #self.set_size_request(400, 400)
 
         notebook = Gtk.Notebook()
 
         self.add(notebook)
 
-        settingBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        settingBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         settingLabel = Gtk.Label("Settings")
         notebook.append_page(settingBox, settingLabel)
         self.data = util.readFromConfig()
@@ -25,7 +25,7 @@ class helpWindow(Gtk.Window) :
         self.audioOnlyButton.set_focus_on_click(False)
         smallBox.pack_start(self.audioOnlyButton, True, True,0)
 
-        okButtonBox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        okButtonBox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         settingBox.pack_end(okButtonBox, True, True, 0)
         cancelButton = Gtk.Button("Cancel")
         okButtonBox.pack_end(cancelButton, True, True, 0)
@@ -100,23 +100,9 @@ class helpWindow(Gtk.Window) :
         infoLabel = Gtk.Label()
         infoLabel.set_markup(
         '''
-                    <big><b> YouTubePlayer </b></big>
-
-                            <i> Contributors </i>
-                       <i>Vishnunarayan K I </i>
-                      <i>Tarun Kumar Singh </i>
-
-                    <b> Usage Information </b>
-
-<b>1.</b> If you have a youtube link in hand, paste it
-          in the url tab and press play.
-
-<b>2.</b> If you want to search for a specific video,
-          type <i>/search_term</i> in the url bar.
-
-<b>3.</b> If you want to search for a playlist, type
-          <i>//search_term</i> in the url bar.
-
+                <i> Contributors </i>
+           <i>Vishnunarayan K I </i>
+          <i>Tarun Kumar Singh </i>
         '''
         )
 
@@ -125,6 +111,10 @@ class helpWindow(Gtk.Window) :
     def buttonClicked(self, widget, d=None) :
         self.hide()
         return
+
+    def show_function(self) :
+        self.show_all()
+        self.data = util.readFromConfig()
 
     def audioOnly(self, w) :
         self.data['AUDIO_ONLY'] = w.get_active()
@@ -147,3 +137,7 @@ class helpWindow(Gtk.Window) :
 
     def save(self, w) :
         util.writeToConfig(self.data)
+        self.buttonClicked(None)
+
+    def cancel(self, w) :
+        self.buttonClicked(None)
