@@ -18,6 +18,17 @@ elif [ $CMD = "uninstall" ]; then
   sudo rm /usr/share/applications/YouTubePlayer.desktop
   echo "Uninstallation finished"
 
+elif [ $CMD = "reinstall" ]; then
+  echo "Uninstalling.."
+  sudo rm -rf $INSTALLDIR
+  sudo rm /usr/share/applications/YouTubePlayer.desktop
+  echo "Uninstallation finished"
+  echo "Installing.."
+  sudo cp -r . $INSTALLDIR
+  sudo chmod +x $INSTALLDIR/main.py
+  sudo cp ./core/YouTubePlayer.desktop /usr/share/applications/YouTubePlayer.desktop
+  echo "Installation finished"
+
 elif [ $CMD = "update" ]; then
   echo "Updating.."
   cd /opt/YouTubePlayer

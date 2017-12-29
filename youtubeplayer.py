@@ -412,6 +412,7 @@ class YouTubePlayer(Gtk.Window) :
     def openVLC(self,url) :
 
         # Check if input is a url or search query
+        search_query = url
 
         if url[0] == '/' : # search term
             if url[1] == '/' :
@@ -427,16 +428,26 @@ class YouTubePlayer(Gtk.Window) :
                 if url == -1 : # Error loading url
                     return
 
-        if len(url) == 11: #not a playlist
+        if 'list' not in url: #not a playlist
             try :
+                GObject.idle_add(self.infoLabel.set_text,"Playing", priority=GObject.PRIORITY_DEFAULT)
                 vid = pafy.new(url)
+                if search_query[-4:] == '/mix' :
+                    playlist = vid.mix
+                    print(playlist['title'])
+                    self.totalTracks=len(playlist['items'])
+                    GObject.idle_add(self.infoLabel.set_text,playlist['title'], priority=GObject.PRIORITY_DEFAULT)
+                    self.playList=playlist['items'];
+                    self._playPlaylist()
+                else :
+                    self._openVLCShell(vid)
             except ValueError:
                 GObject.idle_add(self.infoLabel.set_text,"Use /<search_query>. Don't ask me why. XD", priority=GObject.PRIORITY_DEFAULT)
                 return
             except :
                 GObject.idle_add(self.infoLabel.set_text,"Error getting video", priority=GObject.PRIORITY_DEFAULT)
                 return
-            self._openVLCShell(vid)
+
 
         else: # A playlist
             try :
@@ -448,7 +459,7 @@ class YouTubePlayer(Gtk.Window) :
                 GObject.idle_add(self.infoLabel.set_text,"Error getting playlist", priority=GObject.PRIORITY_DEFAULT)
                 return
             self.totalTracks=len(playlist['items'])
-            self.infoLabel.set_text(playlist['title'])
+            GObject.idle_add(self.infoLabel.set_text, playlist['title'], priority=GObject.PRIORITY_DEFAULT)
             self.playList=playlist['items'];
             self._playPlaylist()
 
@@ -591,7 +602,7 @@ class YouTubePlayer(Gtk.Window) :
                     return
             else :
                 #Search for video
-                self.infoLabel.set_text("Searching for video")[0]
+                self.infoLabel.set_text("Searching for video")
                 url = util._getYTResultURL(url[1:])[0]['id']
                 if url == -1 : #Error finding url
                     return
