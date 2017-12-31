@@ -428,7 +428,7 @@ class YouTubePlayer(Gtk.Window) :
                 if url == -1 : # Error loading url
                     return
 
-        if 'list' not in url: #not a playlist
+        if 'list' not in url and url[:2] != 'PL': #not a playlist
             try :
                 GObject.idle_add(self.infoLabel.set_text,"Playing", priority=GObject.PRIORITY_DEFAULT)
                 vid = pafy.new(url)
@@ -444,7 +444,8 @@ class YouTubePlayer(Gtk.Window) :
             except ValueError:
                 GObject.idle_add(self.infoLabel.set_text,"Use /<search_query>. Don't ask me why. XD", priority=GObject.PRIORITY_DEFAULT)
                 return
-            except :
+            except Exception as e:
+                print(e)
                 GObject.idle_add(self.infoLabel.set_text,"Error getting video", priority=GObject.PRIORITY_DEFAULT)
                 return
 
@@ -485,7 +486,8 @@ class YouTubePlayer(Gtk.Window) :
             self.mpris.Metadata = {
                 'xesam:title' :GLib.Variant('s', video.title),
                 'mpris:trackid' :GLib.Variant('o', '/org/mpris/MediaPlayer2/YouTubePlayer/'+str(self.vidNo)),
-                'mpris:length' : GLib.Variant('x', video.length*1000000)
+                'mpris:length' : GLib.Variant('x', video.length*1000000),
+                'mpris:artUrl' : GLib.Variant('s', video.thumb)
             }
 
         else :
@@ -546,6 +548,7 @@ class YouTubePlayer(Gtk.Window) :
             icon_path = os.path.realpath('images/icons/yt-icon.png')
             Notify.Notification.new(metadata['track_title'], metadata['album']+'\n'+metadata['artist'], icon_path).show()
 
+        self.player.audio_set_volume(100)
         GObject.idle_add(self.currentTime.show)
         GObject.idle_add(self.seekBar.show)
         GObject.idle_add(self.totalTime.show)

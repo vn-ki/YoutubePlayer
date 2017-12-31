@@ -38,4 +38,15 @@ elif [ $CMD = "update" ]; then
 elif [ $CMD = "run" ]; then
   echo "Opening YouTube Player"
   exec ./main.py
+
+else
+  echo "Unknown option \"" $CMD "\""
+  echo ""
+  echo "Usage ./YouTubePlayer [option]"
+  echo ""
+  echo "OPTIONS :"
+  echo "    install        -  Installs YouTube Player"
+  echo "    uninstall      -  Uninstalls YouTube Player"
+  echo "    reinstall      -  Reinstalls YouTube Player"
+  echo "    run            -  Runs YouTube Player without installing"
 fi
