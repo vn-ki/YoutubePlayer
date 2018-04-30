@@ -2,49 +2,50 @@ from pydbus import SessionBus
 from pydbus.generic import signal
 from gi.repository import GLib
 
-#TODO : Implement the seeked signal and seek through mpris
+# TODO : Implement the seeked signal and seek through mpris
 
-class MPRIS(object) :
-    def Raise(self) :
+
+class MPRIS(object):
+    def Raise(self):
         self.player.set_keep_above(True)
         self.player.set_keep_above(False)
         self.player.present()
         return
 
-    def Quit(self) :
+    def Quit(self):
         return
 
-    def Next(self) :
+    def Next(self):
         self.player.next(None)
 
-    def Previous(self) :
+    def Previous(self):
         self.player.previous(None)
 
-    def Pause(self) :
+    def Pause(self):
         print("pause")
 
-    def PlayPause(self) :
+    def PlayPause(self):
         self.player.play(None)
 
-    def Stop(self) :
+    def Stop(self):
         print("stop")
 
-    def Play(self) :
+    def Play(self):
         self.player.play()
         print('play')
 
-    def Seek(self, o) :
-        #self.player._seek(o/1000)
+    def Seek(self, o):
+        # self.player._seek(o/1000)
         pass
 
-    def SetPosition(self, TrackId, Position) :
+    def SetPosition(self, TrackId, Position):
         self.Position = Position
-        self.player._seek(Position//1000)
+        self.player._seek(Position // 1000)
 
-    def OpenUri(self, s) :
+    def OpenUri(self, s):
         print(s)
 
-    def __init__(self) :
+    def __init__(self):
         self._CanQuit = False
         self._CanRaise = True
         self._HasTrackList = False
@@ -65,180 +66,197 @@ class MPRIS(object) :
         self._CanSeek = True
         self._CanControl = True
 
-
-
     @property
-    def CanQuit(self) :
+    def CanQuit(self):
         return self._CanQuit
 
     @CanQuit.setter
-    def CanQuit(self, value) :
+    def CanQuit(self, value):
         self._CanQuit = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2", {"CanQuit": self.CanQuit}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2",
+                               {"CanQuit": self.CanQuit}, [])
 
     @property
-    def CanRaise(self) :
+    def CanRaise(self):
         return self._CanRaise
 
     @CanRaise.setter
-    def CanRaise(self, value) :
+    def CanRaise(self, value):
         self._CanRaise = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2", {"CanRaise": self.CanRaise}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2",
+                               {"CanRaise": self.CanRaise}, [])
 
     @property
-    def HasTrackList(self) :
+    def HasTrackList(self):
         return self._HasTrackList
 
     @HasTrackList.setter
-    def HasTrackList(self, value) :
+    def HasTrackList(self, value):
         self._HasTrackList = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2", {"HasTrackList": self.HasTrackList}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2",
+                               {"HasTrackList": self.HasTrackList}, [])
 
     @property
-    def Identity(self) :
+    def Identity(self):
         return self._Identity
 
     @Identity.setter
-    def Identity(self, value) :
+    def Identity(self, value):
         self._Identity = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2", {"Identity": self.Identity}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2",
+                               {"Identity": self.Identity}, [])
 
     @property
-    def SupportedUriSchemes(self) :
+    def SupportedUriSchemes(self):
         return self._SupportedUriSchemes
 
     @SupportedUriSchemes.setter
-    def SupportedUriSchemes(self, value) :
+    def SupportedUriSchemes(self, value):
         self._SupportedUriSchemes = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2", {"SupportedUriSchemes": self.SupportedUriSchemes}, [])
+        self.PropertiesChanged(
+            "org.mpris.MediaPlayer2",
+            {"SupportedUriSchemes": self.SupportedUriSchemes}, [])
 
     @property
-    def SupportedMimeTypes(self) :
+    def SupportedMimeTypes(self):
         return self._SupportedMimeTypes
 
     @SupportedMimeTypes.setter
-    def SupportedMimeTypes(self, value) :
+    def SupportedMimeTypes(self, value):
         self._SupportedMimeTypes = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2", {"SupportedMimeTypes": self.SupportedMimeTypes}, [])
-
+        self.PropertiesChanged("org.mpris.MediaPlayer2",
+                               {"SupportedMimeTypes": self.SupportedMimeTypes},
+                               [])
 
     ###
 
     @property
-    def PlaybackStatus(self) :
+    def PlaybackStatus(self):
         return self._PlaybackStatus
 
     @PlaybackStatus.setter
-    def PlaybackStatus(self, value) :
+    def PlaybackStatus(self, value):
         self._PlaybackStatus = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"PlaybackStatus": self.PlaybackStatus}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"PlaybackStatus": self.PlaybackStatus}, [])
 
     @property
-    def Rate(self) :
+    def Rate(self):
         return self._Rate
 
     @Rate.setter
-    def Rate(self, value) :
+    def Rate(self, value):
         self._Rate = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"Rate": self.Rate}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"Rate": self.Rate}, [])
 
     @property
-    def Metadata(self) :
+    def Metadata(self):
         return self._Metadata
 
     @Metadata.setter
-    def Metadata(self, value) :
+    def Metadata(self, value):
         self._Metadata = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"Metadata": self.Metadata}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"Metadata": self.Metadata}, [])
 
     @property
-    def Volume(self) :
+    def Volume(self):
         return self._Volume
 
     @Volume.setter
-    def Volume(self, value) :
+    def Volume(self, value):
         self._Volume = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"Volume": self.Volume}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"Volume": self.Volume}, [])
 
     @property
-    def Position(self) :
+    def Position(self):
         return self._Position
 
     @Position.setter
-    def Position(self, value) :
+    def Position(self, value):
         self._Position = value
 
     @property
-    def MinimumRate(self) :
+    def MinimumRate(self):
         return self._MinimumRate
 
     @MinimumRate.setter
-    def MinimumRate(self, value) :
+    def MinimumRate(self, value):
         self._MinimumRate = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"MinimumRate": self.MinimumRate}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"MinimumRate": self.MinimumRate}, [])
 
     @property
-    def MaximumRate(self) :
+    def MaximumRate(self):
         return self._MaximumRate
 
     @MaximumRate.setter
-    def MaximumRate(self, value) :
+    def MaximumRate(self, value):
         self._MaximumRate = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"MaximumRate"  : self.MaximumRate}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"MaximumRate": self.MaximumRate}, [])
 
     @property
-    def CanGoNext(self) :
+    def CanGoNext(self):
         return self._CanGoNext
 
     @CanGoNext.setter
-    def CanGoNext(self, value) :
+    def CanGoNext(self, value):
         self._CanGoNext = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanGoNext": self.CanGoNext}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"CanGoNext": self.CanGoNext}, [])
 
     @property
-    def CanGoPrevious(self) :
+    def CanGoPrevious(self):
         return self._CanGoPrevious
 
     @CanGoPrevious.setter
-    def CanGoPrevious(self, value) :
+    def CanGoPrevious(self, value):
         self._CanGoPrevious = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanGoPrevious": self.CanGoPrevious}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"CanGoPrevious": self.CanGoPrevious}, [])
 
     @property
-    def CanPlay(self) :
+    def CanPlay(self):
         return self._CanPlay
 
     @CanPlay.setter
-    def CanPlay(self, value) :
+    def CanPlay(self, value):
         self._CanPlay = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanPlay": self.CanPlay}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"CanPlay": self.CanPlay}, [])
 
     @property
-    def CanPause(self) :
+    def CanPause(self):
         return self._CanPause
 
     @CanPause.setter
-    def CanPause(self, value) :
+    def CanPause(self, value):
         self._CanPause = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanPause": self.CanPause}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"CanPause": self.CanPause}, [])
 
     @property
-    def CanSeek(self) :
+    def CanSeek(self):
         return self._CanSeek
 
     @CanSeek.setter
-    def CanSeek(self, value) :
+    def CanSeek(self, value):
         self._CanSeek = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanSeek": self.CanSeek}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"CanSeek": self.CanSeek}, [])
 
     @property
-    def CanControl(self) :
+    def CanControl(self):
         return self._CanControl
 
     @CanControl.setter
-    def CanControl(self, value) :
+    def CanControl(self, value):
         self._CanControl = value
-        self.PropertiesChanged("org.mpris.MediaPlayer2.Player", {"CanControl": self.CanControl}, [])
+        self.PropertiesChanged("org.mpris.MediaPlayer2.Player",
+                               {"CanControl": self.CanControl}, [])
 
     PropertiesChanged = signal()
     Seeked = signal()
